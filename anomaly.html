@@ -43,10 +43,23 @@ document.querySelectorAll('.metric-head').forEach(btn => btn.addEventListener('c
 // 第三、第四层是本周全局巡检结论，不在每个异常指标下重复呈现。
 document.querySelectorAll('.metric-body details:nth-of-type(3), .metric-body details:nth-of-type(4)').forEach(node => node.remove());
 const globalData = D.events?.[0] || {};
-const globalBatchRows = (globalData.batchCategories || []).map(category => category.batches.map((batch, index) => `<tr>${index === 0 ? `<td rowspan="${category.batches.length}"><b>${esc(category.category)}</b></td>` : ''}<td>${batch.avg_duration == null ? '—' : `${batch.avg_duration}min`}</td><td>${esc(batch.engineer)}</td><td>${esc(batch.group)}</td><td>${esc(batch.date)}</td><td>${esc(batch.user_id)}</td><td>${batch.count} 单</td><td>${esc(batch.region)}</td><td>${esc(batch.fight_area)}</td></tr>`).join('')).join('') || '<tr><td colspan="9" class="ok">本周无批量场景</td></tr>';
+const maskUid = uid => {
+  const raw = String(uid ?? '—');
+  if (raw.length <= 8) return raw;
+  const start = Math.max(1, Math.floor((raw.length - 8) / 2));
+  return `${raw.slice(0, start)}${'*'.repeat(8)}${raw.slice(start + 8)}`;
+};
+const uidCell = uid => `<span class="uid-value" data-masked="${esc(maskUid(uid))}" data-full="${esc(uid)}">${esc(maskUid(uid))}</span> <button class="uid-toggle" type="button" style="margin-left:5px;padding:1px 5px;border:1px solid #39436a;border-radius:4px;background:#1a2035;color:#aeb6ff;font-size:11px;cursor:pointer">展开</button>`;
+const globalBatchRows = (globalData.batchCategories || []).map(category => category.batches.map((batch, index) => `<tr>${index === 0 ? `<td rowspan="${category.batches.length}"><b>${esc(category.category)}</b></td>` : ''}<td>${batch.avg_duration == null ? '—' : `${batch.avg_duration}min`}</td><td>${esc(batch.engineer)}</td><td>${esc(batch.group)}</td><td>${esc(batch.date)}</td><td>${uidCell(batch.user_id)}</td><td>${batch.count} 单</td><td>${esc(batch.region)}</td><td>${esc(batch.fight_area)}</td></tr>`).join('')).join('') || '<tr><td colspan="9" class="ok">本周无批量场景</td></tr>';
 const globalBatchAverage = globalData.batchAvgDuration == null ? '—' : `${globalData.batchAvgDuration}min`;
 const globalSection = document.createElement('section');
 globalSection.className = 'metric';
 globalSection.innerHTML = `<div class="metric-head" style="cursor:default">本周全局下探巡检</div><div class="metric-body">${layer2('第三层：异常工程师数量统计（按是否批量场景区分）',table2(['命中条件','整体','新人','老人','批量场景','非批量场景'],statRows2))}${layer2(`第四层：全部品类批量场景核查（批量场景单均签到履约时长：${globalBatchAverage}）`,table2(['品类','单均签到履约时长','工程师','群体','日期','用户UID','单量','大区','战区'],globalBatchRows))}</div>`;
 document.getElementById('metrics').after(globalSection);
+document.querySelectorAll('.uid-toggle').forEach(button => button.addEventListener('click', () => {
+  const value = button.previousElementSibling;
+  const expanded = button.textContent === '收起';
+  value.textContent = expanded ? value.dataset.masked : value.dataset.full;
+  button.textContent = expanded ? '展开' : '收起';
+}));
 </script></body></html>
