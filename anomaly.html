@@ -65,7 +65,7 @@ document.querySelectorAll('.uid-toggle').forEach(button => button.addEventListen
 </script><script>
 // 将第一、二层聚合成每个指标的一张完整下探表，避免信息被拆散。
 const contributionDefinition = '计算口径：该品类订单量占比 × 该指标环比绝对变化，再除以全部品类该值之和；用于衡量该品类对大盘环比变化的相对贡献。';
-const contributionTip = `<span title="${contributionDefinition}" style="display:inline-flex;align-items:center;justify-content:center;width:15px;height:15px;margin-left:3px;border:1px solid #7b80a0;border-radius:50%;color:#aeb6ff;font-size:10px;cursor:help">?</span>`;
+const contributionTip = `<span style="position:relative;display:inline-block"><button class="contribution-tip" type="button" aria-expanded="false" style="width:16px;height:16px;margin-left:3px;padding:0;border:1px solid #7b80a0;border-radius:50%;background:#1a2035;color:#aeb6ff;font-size:10px;line-height:14px;cursor:pointer">?</button><span class="contribution-popover" style="display:none;position:absolute;z-index:20;left:-115px;top:22px;width:280px;padding:9px 10px;border:1px solid #3a3d52;border-radius:7px;background:#252839;color:#fff;font-size:11px;font-weight:400;line-height:1.55;white-space:normal;box-shadow:0 4px 12px rgba(0,0,0,.3)">${contributionDefinition}</span></span>`;
 document.getElementById('metrics').innerHTML = (D.events || []).map(event => {
   const rows = (event.topCategories || []).map((row, index) => `<tr><td>Top${index + 1} · <b>${esc(row.category)}</b></td><td>${row.orders}</td><td><b>${fmtValue(event.metric,row.value)}</b> <span class="${deltaClass(row.delta)}">${fmtDelta(row.delta,event.suffix)}</span></td><td>${fmtValue(event.metric,row.groups.新人.value)} <span class="${deltaClass(row.groups.新人.delta)}">${fmtDelta(row.groups.新人.delta,event.suffix)}</span></td><td>${fmtValue(event.metric,row.groups.老人.value)} <span class="${deltaClass(row.groups.老人.delta)}">${fmtDelta(row.groups.老人.delta,event.suffix)}</span></td><td>${row.contribution}%</td><td class="driver">${esc(row.driver)}</td></tr>`).join('');
   const body = layer2('Top5 品类影响及新人 / 老人差异汇总', table2(['品类','订单量','整体（当前值 / 环比）','新人（当前值 / 环比）','老人（当前值 / 环比）',`权重占比 ${contributionTip}`,'主要拉动方'], rows));
@@ -75,5 +75,16 @@ document.querySelectorAll('#metrics .metric-head').forEach(button => button.addE
   const body = button.nextElementSibling, visible = body.style.display !== 'none';
   body.style.display = visible ? 'none' : 'block';
   button.querySelector('.chev').textContent = visible ? '⌄' : '⌃';
+}));
+document.querySelectorAll('.contribution-tip').forEach(button => button.addEventListener('click', event => {
+  event.stopPropagation();
+  const popover = button.nextElementSibling;
+  const isOpen = popover.style.display !== 'none';
+  document.querySelectorAll('.contribution-popover').forEach(item => item.style.display = 'none');
+  document.querySelectorAll('.contribution-tip').forEach(item => item.setAttribute('aria-expanded', 'false'));
+  if (!isOpen) {
+    popover.style.display = 'block';
+    button.setAttribute('aria-expanded', 'true');
+  }
 }));
 </script></body></html>
