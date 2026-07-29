@@ -54,12 +54,26 @@ const globalBatchRows = (globalData.batchCategories || []).map(category => categ
 const globalBatchAverage = globalData.batchAvgDuration == null ? '—' : `${globalData.batchAvgDuration}min`;
 const globalSection = document.createElement('section');
 globalSection.className = 'metric';
-globalSection.innerHTML = `<div class="metric-head" style="cursor:default">本周全局下探巡检</div><div class="metric-body">${layer2('第三层：异常工程师数量统计（按是否批量场景区分）',table2(['命中条件','整体','新人','老人','批量场景','非批量场景'],statRows2))}${layer2(`第四层：全部品类批量场景核查（批量场景单均签到履约时长：${globalBatchAverage}）`,table2(['品类','单均签到履约时长','工程师','群体','日期','用户UID','单量','大区','战区'],globalBatchRows))}</div>`;
+globalSection.innerHTML = `<div class="metric-head" style="cursor:default">全局巡检汇总（第三、四层）</div><div class="metric-body">${layer2('第三层：异常工程师数量统计（按是否批量场景区分）',table2(['命中条件','整体','新人','老人','批量场景','非批量场景'],statRows2))}${layer2(`第四层：全部品类批量场景核查（批量场景单均签到履约时长：${globalBatchAverage}）`,table2(['品类','单均签到履约时长','工程师','群体','日期','用户UID','单量','大区','战区'],globalBatchRows))}</div>`;
 document.getElementById('metrics').after(globalSection);
 document.querySelectorAll('.uid-toggle').forEach(button => button.addEventListener('click', () => {
   const value = button.previousElementSibling;
   const expanded = button.textContent === '收起';
   value.textContent = expanded ? value.dataset.masked : value.dataset.full;
   button.textContent = expanded ? '展开' : '收起';
+}));
+</script><script>
+// 将第一、二层聚合成每个指标的一张完整下探表，避免信息被拆散。
+const contributionDefinition = '计算口径：该品类订单量占比 × 该指标环比绝对变化，再除以全部品类该值之和；用于衡量该品类对大盘环比变化的相对贡献。';
+const contributionTip = `<span title="${contributionDefinition}" style="display:inline-flex;align-items:center;justify-content:center;width:15px;height:15px;margin-left:3px;border:1px solid #7b80a0;border-radius:50%;color:#aeb6ff;font-size:10px;cursor:help">?</span>`;
+document.getElementById('metrics').innerHTML = (D.events || []).map(event => {
+  const rows = (event.topCategories || []).map((row, index) => `<tr><td>Top${index + 1} · <b>${esc(row.category)}</b></td><td>${row.orders}</td><td><b>${fmtValue(event.metric,row.value)}</b> <span class="${deltaClass(row.delta)}">${fmtDelta(row.delta,event.suffix)}</span></td><td>${fmtValue(event.metric,row.groups.新人.value)} <span class="${deltaClass(row.groups.新人.delta)}">${fmtDelta(row.groups.新人.delta,event.suffix)}</span></td><td>${fmtValue(event.metric,row.groups.老人.value)} <span class="${deltaClass(row.groups.老人.delta)}">${fmtDelta(row.groups.老人.delta,event.suffix)}</span></td><td>${row.contribution}%</td><td class="driver">${esc(row.driver)}</td></tr>`).join('');
+  const body = layer2('Top5 品类影响及新人 / 老人差异汇总', table2(['品类','订单量','整体（当前值 / 环比）','新人（当前值 / 环比）','老人（当前值 / 环比）',`权重贡献度 ${contributionTip}`,'主要拉动方'], rows));
+  return `<section class="metric"><button class="metric-head"><span>${esc(event.metric)}</span><span class="metric-value">${fmtValue(event.metric,event.value)}</span><span class="delta ${event.status === 'improved' ? 'good' : 'bad'}">${fmtDelta(event.delta,event.suffix)} ${esc(event.direction)}</span><span class="warning">⚠️异常</span><span class="chev">⌃</span></button><div class="metric-body">${body}</div></section>`;
+}).join('') || '<div class="empty">本周未触发异常阈值。</div>';
+document.querySelectorAll('#metrics .metric-head').forEach(button => button.addEventListener('click', () => {
+  const body = button.nextElementSibling, visible = body.style.display !== 'none';
+  body.style.display = visible ? 'none' : 'block';
+  button.querySelector('.chev').textContent = visible ? '⌄' : '⌃';
 }));
 </script></body></html>
