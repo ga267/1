@@ -57,6 +57,11 @@ METRICS = [
 METRIC_FORMULAS = {
     "单均签到完结时长": "签到完结时长求和 / 签到单量（剔除暂停单）",
     "签到单量": "签到时间不为空且非暂停订单数",
+    "有效签到单量": "签到时间、完结时间均不为空且非暂停的订单数",
+    "拍照完成单量": "first_photo_shot_complete_time 不为空订单数",
+    "报价单量": "merchant_first_offer_price_time 不为空订单数",
+    "驳回单量": "refuse_num>0 订单数",
+    "复检单量": "recheck_num>0 订单数",
     "单均首次拍照时长": "首次拍照时长求和 / 拍照完成单量",
     "履约超时率": "签到完结时长≥30min 订单数 / 签到完结时长有效单量（剔除暂停单）",
     "拍照及时完成率": "首次拍照时长≤6min 订单数 / 拍照完成单量",
@@ -391,6 +396,11 @@ def calc(g):
         "多次复检占比":     sr(g[g["多次复检"]==1], g_recheck),
         "单均拍照报价时长":  sm(g_ns_offer["拍照报价时长"]),
         "签到单量":          int(len(g_ns_sign)),
+        "有效签到单量":      int(len(g_sv)),
+        "拍照完成单量":      int(len(g_photo)),
+        "报价单量":          int(len(g_offer)),
+        "驳回单量":          int(len(g_reject)),
+        "复检单量":          int(len(g_recheck)),
         "日均成交单量":      round(len(g_deal) / 7, 1),
         "日均签到单":        round(len(g_ns_sign) / 7, 1),
         "日均报价单":        round(len(g_ns_offer) / 7, 1),
@@ -1447,7 +1457,8 @@ document.querySelectorAll('.matrix th').forEach(th=>{{const name=th.textContent.
 (() => {{
   const app=document.getElementById('app'); app.innerHTML='';
   const positive=new Set(['拍照及时完成率','报价成交率']);
-  const fmt=(name,value)=>{{if(value==null)return '—';if(name==='签到单量')return Number(value).toLocaleString()+' 单';if(name.includes('工程师数'))return value+' 人';if(name==='批量场景'||name==='批量次均单量')return value;if(rate.has(name))return value+'%';if(name.includes('时长'))return value+'min';return String(value);}};
+  const denominatorByMetric={{'单均签到完结时长':'有效签到单量','单均拍照报价时长':'报价单量','单均首次拍照时长':'拍照完成单量','履约超时率':'有效签到单量','拍照及时完成率':'拍照完成单量','驳回率':'拍照完成单量','报价成交率':'报价单量','复检率':'拍照完成单量','多次驳回占比':'驳回单量','多次复检占比':'复检单量'}};
+  const fmt=(name,value)=>{{if(value==null)return '—';if(name.endsWith('单量'))return Number(value).toLocaleString()+' 单';if(name.includes('工程师数'))return value+' 人';if(name==='批量场景'||name==='批量次均单量')return value;if(rate.has(name))return value+'%';if(name.includes('时长'))return value+'min';return String(value);}};
   const dFmt=(name,value)=>{{if(value==null)return '—';return `${{value>0?'▲':'▼'}}${{Math.abs(value).toFixed(1)}}${{rate.has(name)?'pp':'%'}}`;}};
   const state=(name,value,prev)=>{{if(value==null||prev==null||value===prev)return 'neutral';const better=positive.has(name)?value>prev:value<prev;return better?'good':'bad';}};
   const valueCell=(name,obj)=>{{const previous=obj?.prev;const current=obj?.value;return `<td title="上周：${{fmt(name,previous)}}"><span class="${{state(name,current,previous)}}">${{fmt(name,current)}}</span></td>`;}};
@@ -1465,9 +1476,10 @@ document.querySelectorAll('.matrix th').forEach(th=>{{const name=th.textContent.
       return {{value:null,prev:null,delta:null,prev_delta:null}};
     }};
     const rows=(b.selected||[]).map(row=>['总体','新人','老人'].map((group,index)=>{{
-      const signCount=row.details?.[group]?.['签到单量'];
-      const signNote=b.metric==='单均签到完结时长'&&signCount?.value!=null?`<span class="denom">签到单量 ${{Number(signCount.value).toLocaleString()}} 单（${{dFmt('签到单量',signCount.delta)}}）</span>`:'';
-      const label=group==='总体'?`<span class="${{row.source==='权重异常'?'source':'extreme'}}">${{row.source==='权重异常'?'权重Top':'极值'}}</span> ${{row.category}}（${{row.weight}}%）${{signNote}}`:(group==='新人'?`新人（在职&lt;180天）${{signNote}}`:`老人（在职≥180天）${{signNote}}`);
+      const denominator=denominatorByMetric[b.metric];
+      const denominatorData=denominator?row.details?.[group]?.[denominator]:null;
+      const denominatorNote=denominatorData?.value!=null?`<span class="denom">${{denominator}} ${{fmt(denominator,denominatorData.value)}}（${{dFmt(denominator,denominatorData.delta)}}）</span>`:'';
+      const label=group==='总体'?`<span class="${{row.source==='权重异常'?'source':'extreme'}}">${{row.source==='权重异常'?'权重Top':'极值'}}</span> ${{row.category}}（${{row.weight}}%）${{denominatorNote}}`:(group==='新人'?`新人（在职&lt;180天）${{denominatorNote}}`:`老人（在职≥180天）${{denominatorNote}}`);
       const cells=cols.map(col=>{{const obj=dataFor(row,group,col);return combinedCell(col.name,obj);}}).join('');
       return `<tr class="${{index?'sub '+(group==='新人'?'new':'old'):'total'}}" data-c="${{row.category}}"><td>${{label}}</td>${{cells}}</tr>`;
     }}).join('')).join('');
