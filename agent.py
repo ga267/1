@@ -1429,10 +1429,11 @@ document.querySelectorAll('.matrix th').forEach(th=>{{const name=th.textContent.
   const state=(name,value,prev)=>{{if(value==null||prev==null||value===prev)return 'neutral';const better=positive.has(name)?value>prev:value<prev;return better?'good':'bad';}};
   const valueCell=(name,obj)=>{{const previous=obj?.prev;const current=obj?.value;return `<td title="上周：${{fmt(name,previous)}}"><span class="${{state(name,current,previous)}}">${{fmt(name,current)}}</span></td>`;}};
   const deltaCell=(name,obj)=>{{const previousDelta=obj?.prev_delta;return `<td title="上周环比：${{dFmt(name,previousDelta)}}"><span class="${{state(name,obj?.value,obj?.prev)}}">${{dFmt(name,obj?.delta)}}</span></td>`;}};
+  const combinedCell=(name,obj)=>{{const previous=obj?.prev,current=obj?.value,change=obj?.delta;const deltaText=change==null?'':`（<span class="${{state(name,current,previous)}}">${{dFmt(name,change)}}</span>）`;return `<td title="上周：${{fmt(name,previous)}}"><span class="${{state(name,current,previous)}}">${{fmt(name,current)}}</span>${{deltaText}}</td>`;}};
   const buildColumns=b=>{{const cols=[{{key:'main',name:b.metric}}];if(b.metric==='单均签到完结时长')cols.push({{key:'sign_count',name:'签到单量'}});(b.related||[]).forEach(r=>{{if(r.type==='metrics')(r.metrics||[]).forEach(m=>cols.push({{key:'metric:'+m,name:m}}));else if(r.type==='engineer')cols.push({{key:'engineer:'+r.title,name:r.title}});else if(r.type==='batch')cols.push({{key:'batch',name:'批量场景'}});else cols.push({{key:'region:'+r.title,name:r.title}});}});return cols;}};
   blocks.forEach(b=>{{
     const cols=buildColumns(b);
-    const header='<th>品类 / 维度</th>'+cols.map(c=>`<th>${{c.name}} ${{q(c.name)}}</th><th>环比</th>`).join('');
+    const header='<th>品类 / 维度</th>'+cols.map(c=>`<th>${{c.name}} ${{q(c.name)}}</th>`).join('');
     const dataFor=(row,group,col)=>{{
       if(col.key==='main')return row.segments?.[group];
       if(col.key==='sign_count')return row.details?.[group]?.['签到单量'];
@@ -1443,7 +1444,7 @@ document.querySelectorAll('.matrix th').forEach(th=>{{const name=th.textContent.
     }};
     const rows=(b.selected||[]).map(row=>['总体','新人','老人'].map((group,index)=>{{
       const label=group==='总体'?`${{row.category}}（${{row.weight}}%） <span class="${{row.source==='权重异常'?'source':'extreme'}}">${{row.source==='权重异常'?'权重Top':'极值'}}</span>`:(group==='新人'?'新人（在职&lt;180天）':'老人（在职≥180天）');
-      const cells=cols.map(col=>{{const obj=dataFor(row,group,col);return valueCell(col.name,obj)+deltaCell(col.name,obj);}}).join('');
+      const cells=cols.map(col=>{{const obj=dataFor(row,group,col);return combinedCell(col.name,obj);}}).join('');
       return `<tr class="${{index?'sub '+(group==='新人'?'new':'old'):'total'}}" data-c="${{row.category}}"><td>${{label}}</td>${{cells}}</tr>`;
     }}).join('')).join('');
     const extra=b.metric==='单均签到完结时长'?` · 签到单量 ${{Number(b.sign_count||0).toLocaleString()}} 单（环比 ${{dFmt('签到单量',b.sign_delta)}}）`:'';
