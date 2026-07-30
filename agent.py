@@ -78,7 +78,8 @@ METRIC_FORMULAS = {
     "拍照报价率": "merchant_first_offer_price_time 不为空订单数 / first_photo_shot_complete_time 不为空订单数",
     "单均议价时长": "（完结时间 - merchant_first_offer_price_time）均值；分母为首次报价时间、完结时间均不为空且非暂停的订单，单位分钟",
     "单均报价次数": "merchant_offer_price_cnt 均值",
-    "新人占比最高大区": "该大区新人订单量 / 该大区总订单量，取占比最高的一个大区",
+    "新人占比最高大区": "该大区新人订单量（on_work_days < 180天的订单数）/ 该大区总订单数，取占比最高的一个大区展示",
+    "新人占比最高的大区": "该大区新人订单量（on_work_days < 180天的订单数）/ 该大区总订单数，取占比最高的一个大区展示",
     "驳回≥10次工程师数": "当周 refuse_num≥10 的工程师人数",
     "复检≥10次工程师数": "当周 recheck_num≥10 的工程师人数",
 }
@@ -842,6 +843,21 @@ def build_metric_drill_data(df, weeks, categories):
                 counts = [count for count in counts if count >= 5]
                 batch_stats[group] = {"次数": len(counts), "单量": sum(counts)}
             row["batch"] = batch_stats
+            # 首次拍照时长下探：按当前品类计算新人占比最高的大区。
+            # 历史文件中保留的是由 on_work_days 派生的「群体」字段，
+            # 因此这里以 群体 == 新人 作为 on_work_days < 180 天的等价判断。
+            region_stats = []
+            for region, rdf in cdf.dropna(subset=["region_name"]).groupby("region_name"):
+                total_orders = len(rdf)
+                newcomer_orders = int((rdf["群体"] == "新人").sum())
+                if total_orders:
+                    region_stats.append({
+                        "name": region,
+                        "newcomer_orders": newcomer_orders,
+                        "total_orders": int(total_orders),
+                        "share": round(newcomer_orders / total_orders * 100, 1),
+                    })
+            row["newbie_top_region"] = max(region_stats, key=lambda item: item["share"]) if region_stats else None
         related = []
         for label in config["layers"]:
             if "工程师数" in label:
@@ -1473,6 +1489,11 @@ document.querySelectorAll('.matrix th').forEach(th=>{{const name=th.textContent.
       if(col.key.startsWith('metric:'))return row.details?.[group]?.[col.name];
       if(col.key.startsWith('engineer:')){{const hit=col.name.includes('驳回')?'驳回≥10次':'复检≥10次';return {{value:D.engineerStats?.[hit]?.[group]??0,prev:null,delta:null,prev_delta:null}};}}
       if(col.key==='batch'){{const item=row.batch?.[group];const display=item?.次数?`${{(item.单量/item.次数).toFixed(1)}} 单/次（${{item.次数}} 次）`:null;return {{value:display,prev:null,delta:null,prev_delta:null}};}}
+      if(col.key.startsWith('region:')){{
+        const item=row.newbie_top_region;
+        const display=item?`${{item.name}} ${{item.share}}%（${{item.newcomer_orders}}/${{item.total_orders}}单）`:null;
+        return {{value:display,prev:null,delta:null,prev_delta:null}};
+      }}
       return {{value:null,prev:null,delta:null,prev_delta:null}};
     }};
     const rows=(b.selected||[]).map(row=>['总体','新人','老人'].map((group,index)=>{{
