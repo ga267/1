@@ -907,7 +907,7 @@ h1{{font-size:24px;font-weight:700;color:#fff;margin-bottom:5px;letter-spacing:-
 .sub{{font-size:12px;color:#7b80a0;margin-bottom:28px}}
 .page-nav{{display:inline-block;margin:2px 0 18px;color:#aeb6ff;font-size:12px;text-decoration:none;border:1px solid #39436a;border-radius:6px;padding:6px 9px;background:#1a2035}}
 .page-nav:hover{{color:#fff;border-color:#818cf8}}
-.stitle{{font-size:18px;font-weight:700;color:#fff;letter-spacing:-.15px;margin:30px 0 14px;padding-bottom:10px;border-bottom:1px solid #2e3a5c;text-align:left}}
+.stitle{{font-size:18px;font-weight:700;color:#fff;letter-spacing:-.15px;margin:30px 0 14px;padding-bottom:10px;border-bottom:1px solid #2e3a5c;text-align:left}}.stitle-note{{font-size:12px;font-weight:400;color:#7b80a0;letter-spacing:0}}
 .overall-grid{{display:grid;grid-template-columns:repeat(5,1fr);gap:12px}}
 .card{{position:relative;overflow:hidden;background:#1e2540;border:1px solid #2e3a5c;border-radius:12px;padding:16px 16px 8px;cursor:crosshair;text-align:left;box-shadow:0 2px 8px rgba(0,0,0,.3)}}
 .card::before{{content:'';position:absolute;z-index:1;left:0;top:0;bottom:0;width:3px;border-radius:0 2px 2px 0;background:#3a3d52}}
@@ -999,7 +999,7 @@ h1{{font-size:24px;font-weight:700;color:#fff;margin-bottom:5px;letter-spacing:-
 <a class="page-nav" href="anomaly.html">🚨 本周异常巡检 →</a>
 <div class="stitle">数据概览（未剔除）</div>
 <div id="og" class="overall-grid"></div>
-<div class="stitle">全指标品类下探（权重 = 品类当前周订单量 ÷ 大盘当前周总订单量）</div>
+<div class="stitle">全指标品类下探 <span class="stitle-note">（权重 = 品类当前周订单量 ÷ 大盘当前周总订单量）</span></div>
 <div id="main-drill" style="display:none"></div>
 <iframe id="metric-drill-frame" class="metric-drill-frame" src="anomaly.html?embed=1" title="全指标品类下探"></iframe>
 <script>
