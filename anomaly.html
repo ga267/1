@@ -23,7 +23,7 @@ b.related.forEach((r,i)=>{if(r.type==='metrics'){const rows=b.selected.map(x=>r.
 app.insertAdjacentHTML('beforeend',`<details class="metric" open><summary>${b.metric} ${q(b.metric)} · ${value(b.metric,b.value)} · <span class="${cls(b.delta)}">${delta(b.metric,b.delta)} ${status}</span></summary>${layers}</details>`);});
 </script><script>
 /* 表格矩阵视图：品类分组，整体/新人/老人三行。 */
-document.head.insertAdjacentHTML('beforeend','<style>.matrix{margin:10px 0}.matrix .body{padding:0;max-height:none}.matrix th:first-child,.matrix td:first-child{position:sticky;left:0;z-index:2}.matrix th:first-child{background:#1a2035}.matrix td:first-child{background:#1e2540}.matrix tr.sub{display:none;background:#181b26;font-size:11px}.matrix tr.sub td{color:#9ba0bc}.matrix tr.new td:first-child{border-left:3px solid #fb7185;color:#fb7185}.matrix tr.old td:first-child{border-left:3px solid #34d399;color:#34d399}.matrix tr.total td:first-child{border-left:3px solid #6366f1}.matrix tr.total{cursor:pointer}.matrix .source{color:#fbbf24;font-size:10px}.matrix .extreme{color:#7b80a0;font-size:10px}.matrix .trend{margin-left:4px;color:#f59e0b;font-size:10px;white-space:nowrap}</style>');
+document.head.insertAdjacentHTML('beforeend','<style>.matrix{margin:10px 0}.matrix .body{padding:0;max-height:none}.matrix th:first-child,.matrix td:first-child{position:sticky;left:0;z-index:2}.matrix th:first-child{background:#1a2035}.matrix td:first-child{background:#1e2540}.matrix tr.sub{display:none;background:#181b26;font-size:11px}.matrix tr.sub td{color:#9ba0bc}.matrix tr.new td:first-child{border-left:3px solid #fb7185;color:#fb7185}.matrix tr.old td:first-child{border-left:3px solid #34d399;color:#34d399}.matrix tr.total td:first-child{border-left:3px solid #6366f1}.matrix tr.total{cursor:pointer}.matrix .source{color:#fbbf24;font-size:10px}.matrix .extreme{color:#7b80a0;font-size:10px}.matrix .denom{display:block;margin-top:3px;color:#7b80a0;font-size:10px;font-weight:400;white-space:nowrap}.matrix .trend{margin-left:4px;color:#f59e0b;font-size:10px;white-space:nowrap}</style>');
 const badDown2=new Set(['拍照及时完成率','报价成交率']);
 const statusCell=(metric,obj)=>{if(!obj||obj.value==null)return '<span class="neutral" title="上周：—">—</span>';const prev=obj.prev;const diff=prev==null?0:obj.value-prev;const good=badDown2.has(metric)?diff>0:diff<0;const color=diff===0?'neutral':good?'good':'bad';return `<span class="${color}" title="上周：${value(metric,prev)}">${value(metric,obj.value)}</span>`;};
 const matrixApp=document.getElementById('app');matrixApp.innerHTML='';
@@ -52,25 +52,25 @@ document.querySelectorAll('.matrix th').forEach(th=>{const name=th.textContent.t
   const valueCell=(name,obj)=>{const previous=obj?.prev;const current=obj?.value;return `<td title="上周：${fmt(name,previous)}"><span class="${state(name,current,previous)}">${fmt(name,current)}</span></td>`;};
   const deltaCell=(name,obj)=>{const previousDelta=obj?.prev_delta;return `<td title="上周环比：${dFmt(name,previousDelta)}"><span class="${state(name,obj?.value,obj?.prev)}">${dFmt(name,obj?.delta)}</span></td>`;};
   const combinedCell=(name,obj)=>{const previous=obj?.prev,current=obj?.value,change=obj?.delta;const deltaText=change==null?'':`（<span class="${state(name,current,previous)}">${dFmt(name,change)}</span>）`;const trend=obj?.bad_streak>=2?`<span class="trend">「连续${obj.bad_streak}周${positive.has(name)?'↓':'↑'}」</span>`:'';return `<td title="上周：${fmt(name,previous)}"><span class="${state(name,current,previous)}">${fmt(name,current)}</span>${deltaText}${trend}</td>`;};
-  const buildColumns=b=>{const cols=[{key:'main',name:b.metric}];if(b.metric==='单均签到完结时长')cols.push({key:'sign_count',name:'签到单量'});(b.related||[]).forEach(r=>{if(r.type==='metrics')(r.metrics||[]).forEach(m=>cols.push({key:'metric:'+m,name:m}));else if(r.type==='engineer')cols.push({key:'engineer:'+r.title,name:r.title});else if(r.type==='batch')cols.push({key:'batch',name:'批量次均单量'});else cols.push({key:'region:'+r.title,name:r.title});});return cols;};
+  const buildColumns=b=>{const cols=[{key:'main',name:b.metric}];(b.related||[]).forEach(r=>{if(r.type==='metrics')(r.metrics||[]).forEach(m=>cols.push({key:'metric:'+m,name:m}));else if(r.type==='engineer')cols.push({key:'engineer:'+r.title,name:r.title});else if(r.type==='batch')cols.push({key:'batch',name:'批量次均单量'});else cols.push({key:'region:'+r.title,name:r.title});});return cols;};
   blocks.forEach(b=>{
     const cols=buildColumns(b);
     const header='<th>品类 / 维度</th>'+cols.map(c=>`<th>${c.name} ${q(c.name)}</th>`).join('');
     const dataFor=(row,group,col)=>{
       if(col.key==='main')return row.segments?.[group];
-      if(col.key==='sign_count')return row.details?.[group]?.['签到单量'];
       if(col.key.startsWith('metric:'))return row.details?.[group]?.[col.name];
       if(col.key.startsWith('engineer:')){const hit=col.name.includes('驳回')?'驳回≥10次':'复检≥10次';return {value:D.engineerStats?.[hit]?.[group]??0,prev:null,delta:null,prev_delta:null};}
       if(col.key==='batch'){const item=row.batch?.[group];const display=item?.次数?`${(item.单量/item.次数).toFixed(1)} 单/次（${item.次数} 次）`:null;return {value:display,prev:null,delta:null,prev_delta:null};}
       return {value:null,prev:null,delta:null,prev_delta:null};
     };
     const rows=(b.selected||[]).map(row=>['总体','新人','老人'].map((group,index)=>{
-      const label=group==='总体'?`${row.category}（${row.weight}%） <span class="${row.source==='权重异常'?'source':'extreme'}">${row.source==='权重异常'?'权重Top':'极值'}</span>`:(group==='新人'?'新人（在职&lt;180天）':'老人（在职≥180天）');
+      const signCount=row.details?.[group]?.['签到单量'];
+      const signNote=b.metric==='单均签到完结时长'&&signCount?.value!=null?`<span class="denom">签到单量 ${Number(signCount.value).toLocaleString()} 单（${dFmt('签到单量',signCount.delta)}）</span>`:'';
+      const label=group==='总体'?`<span class="${row.source==='权重异常'?'source':'extreme'}">${row.source==='权重异常'?'权重Top':'极值'}</span> ${row.category}（${row.weight}%）${signNote}`:(group==='新人'?`新人（在职&lt;180天）${signNote}`:`老人（在职≥180天）${signNote}`);
       const cells=cols.map(col=>{const obj=dataFor(row,group,col);return combinedCell(col.name,obj);}).join('');
       return `<tr class="${index?'sub '+(group==='新人'?'new':'old'):'total'}" data-c="${row.category}"><td>${label}</td>${cells}</tr>`;
     }).join('')).join('');
-    const extra=b.metric==='单均签到完结时长'?` · 签到单量 ${Number(b.sign_count||0).toLocaleString()} 单（环比 ${dFmt('签到单量',b.sign_delta)}）`:'';
-    app.insertAdjacentHTML('beforeend',`<details class="metric matrix" open><summary>${b.metric} ${q(b.metric)} · ${fmt(b.metric,b.value)} <span class="${state(b.metric,b.value,b.value-(b.delta||0))}">${dFmt(b.metric,b.delta)}</span>${extra}</summary><div class="body"><table><thead><tr>${header}</tr></thead><tbody>${rows}</tbody></table></div></details>`);
+    app.insertAdjacentHTML('beforeend',`<details class="metric matrix"><summary>${b.metric} ${q(b.metric)} · ${fmt(b.metric,b.value)} <span class="${state(b.metric,b.value,b.value-(b.delta||0))}">${dFmt(b.metric,b.delta)}</span></summary><div class="body"><table><thead><tr>${header}</tr></thead><tbody>${rows}</tbody></table></div></details>`);
   });
   document.querySelectorAll('.matrix tr.total').forEach(row=>row.addEventListener('click',()=>{const opened=row.dataset.open==='1';row.dataset.open=opened?'0':'1';let next=row.nextElementSibling;while(next&&next.classList.contains('sub')){next.style.display=opened?'none':'table-row';next=next.nextElementSibling;}}));
   document.querySelectorAll('.matrix').forEach(matrix=>{let rank=0;matrix.querySelectorAll('tr.total .source').forEach(tag=>tag.textContent=`权重Top${++rank}`);});
