@@ -68,7 +68,8 @@ METRIC_FORMULAS = {
     "单均拍照报价时长": "拍照报价时长求和 / 报价单量（剔除暂停单）",
     "单均驳回次数": "refuse_num 求和 / 驳回单量",
     "单均复检次数": "recheck_num 求和 / 复检单量",
-    "批量场景": "同一回收师同一天同用户UID下质检/成交≥5单的订单数 / 批量触发次数",
+    "批量场景": "同一回收师、同一天、同一用户 UID 下的质检/成交单量≥5，记为一次批量回收；批量次均单量 = 批量单量 ÷ 批量回收次数。",
+    "批量次均单量": "同一回收师、同一天、同一用户 UID 下的质检/成交单量≥5，记为一次批量回收；批量次均单量 = 批量单量 ÷ 批量回收次数。",
     "拍照报价率": "merchant_first_offer_price_time 不为空订单数 / first_photo_shot_complete_time 不为空订单数",
     "单均议价时长": "（完结时间 - merchant_first_offer_price_time）均值；分母为首次报价时间、完结时间均不为空且非暂停的订单，单位分钟",
     "单均报价次数": "merchant_offer_price_cnt 均值",
@@ -1446,13 +1447,13 @@ document.querySelectorAll('.matrix th').forEach(th=>{{const name=th.textContent.
 (() => {{
   const app=document.getElementById('app'); app.innerHTML='';
   const positive=new Set(['拍照及时完成率','报价成交率']);
-  const fmt=(name,value)=>{{if(value==null)return '—';if(name==='签到单量')return Number(value).toLocaleString()+' 单';if(name.includes('工程师数'))return value+' 人';if(name==='批量场景')return value;if(rate.has(name))return value+'%';if(name.includes('时长'))return value+'min';return String(value);}};
+  const fmt=(name,value)=>{{if(value==null)return '—';if(name==='签到单量')return Number(value).toLocaleString()+' 单';if(name.includes('工程师数'))return value+' 人';if(name==='批量场景'||name==='批量次均单量')return value;if(rate.has(name))return value+'%';if(name.includes('时长'))return value+'min';return String(value);}};
   const dFmt=(name,value)=>{{if(value==null)return '—';return `${{value>0?'▲':'▼'}}${{Math.abs(value).toFixed(1)}}${{rate.has(name)?'pp':'%'}}`;}};
   const state=(name,value,prev)=>{{if(value==null||prev==null||value===prev)return 'neutral';const better=positive.has(name)?value>prev:value<prev;return better?'good':'bad';}};
   const valueCell=(name,obj)=>{{const previous=obj?.prev;const current=obj?.value;return `<td title="上周：${{fmt(name,previous)}}"><span class="${{state(name,current,previous)}}">${{fmt(name,current)}}</span></td>`;}};
   const deltaCell=(name,obj)=>{{const previousDelta=obj?.prev_delta;return `<td title="上周环比：${{dFmt(name,previousDelta)}}"><span class="${{state(name,obj?.value,obj?.prev)}}">${{dFmt(name,obj?.delta)}}</span></td>`;}};
   const combinedCell=(name,obj)=>{{const previous=obj?.prev,current=obj?.value,change=obj?.delta;const deltaText=change==null?'':`（<span class="${{state(name,current,previous)}}">${{dFmt(name,change)}}</span>）`;const trend=obj?.bad_streak>=2?`<span class="trend">「连续${{obj.bad_streak}}周${{positive.has(name)?'↓':'↑'}}」</span>`:'';return `<td title="上周：${{fmt(name,previous)}}"><span class="${{state(name,current,previous)}}">${{fmt(name,current)}}</span>${{deltaText}}${{trend}}</td>`;}};
-  const buildColumns=b=>{{const cols=[{{key:'main',name:b.metric}}];if(b.metric==='单均签到完结时长')cols.push({{key:'sign_count',name:'签到单量'}});(b.related||[]).forEach(r=>{{if(r.type==='metrics')(r.metrics||[]).forEach(m=>cols.push({{key:'metric:'+m,name:m}}));else if(r.type==='engineer')cols.push({{key:'engineer:'+r.title,name:r.title}});else if(r.type==='batch')cols.push({{key:'batch',name:'批量场景'}});else cols.push({{key:'region:'+r.title,name:r.title}});}});return cols;}};
+  const buildColumns=b=>{{const cols=[{{key:'main',name:b.metric}}];if(b.metric==='单均签到完结时长')cols.push({{key:'sign_count',name:'签到单量'}});(b.related||[]).forEach(r=>{{if(r.type==='metrics')(r.metrics||[]).forEach(m=>cols.push({{key:'metric:'+m,name:m}}));else if(r.type==='engineer')cols.push({{key:'engineer:'+r.title,name:r.title}});else if(r.type==='batch')cols.push({{key:'batch',name:'批量次均单量'}});else cols.push({{key:'region:'+r.title,name:r.title}});}});return cols;}};
   blocks.forEach(b=>{{
     const cols=buildColumns(b);
     const header='<th>品类 / 维度</th>'+cols.map(c=>`<th>${{c.name}} ${{q(c.name)}}</th>`).join('');
@@ -1461,7 +1462,7 @@ document.querySelectorAll('.matrix th').forEach(th=>{{const name=th.textContent.
       if(col.key==='sign_count')return row.details?.[group]?.['签到单量'];
       if(col.key.startsWith('metric:'))return row.details?.[group]?.[col.name];
       if(col.key.startsWith('engineer:')){{const hit=col.name.includes('驳回')?'驳回≥10次':'复检≥10次';return {{value:D.engineerStats?.[hit]?.[group]??0,prev:null,delta:null,prev_delta:null}};}}
-      if(col.key==='batch'){{const item=row.batch?.[group];return {{value:item?item.单量+' 单 / '+item.次数+' 次':null,prev:null,delta:null,prev_delta:null}};}}
+      if(col.key==='batch'){{const item=row.batch?.[group];const display=item?.次数?`${{(item.单量/item.次数).toFixed(1)}} 单/次（批量回收次数 ${{item.次数}} 次）`:null;return {{value:display,prev:null,delta:null,prev_delta:null}};}}
       return {{value:null,prev:null,delta:null,prev_delta:null}};
     }};
     const rows=(b.selected||[]).map(row=>['总体','新人','老人'].map((group,index)=>{{
