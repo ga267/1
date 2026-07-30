@@ -942,7 +942,7 @@ h1{{font-size:24px;font-weight:700;color:#fff;margin-bottom:5px;letter-spacing:-
 .anomaly-table th{{padding:9px 10px;color:#8890b0;background:#1a2035;border-bottom:1px solid #28334f;text-align:left;font-weight:600;white-space:nowrap}}
 .anomaly-table td{{padding:9px 10px;color:#c8cce0;border-bottom:1px solid #28334f;vertical-align:top}}
 .anomaly-table tr:last-child td{{border-bottom:0}}
-.metric-drill-frame{{width:100%;height:12000px;border:1px solid #2e3a5c;border-radius:12px;background:#161b2e}}
+.metric-drill-frame{{width:100%;height:800px;border:1px solid #2e3a5c;border-radius:12px;background:#161b2e;display:block}}
 .tag{{display:inline-block;padding:2px 6px;margin:1px 3px 1px 0;border-radius:4px;background:#402633;color:#ff8a8a;font-size:10px;white-space:nowrap}}
 .tag.good{{background:#173c35;color:#62e0ab}}
 .empty-state{{color:#7b80a0;font-size:12px;padding:6px 0}}
@@ -959,7 +959,21 @@ h1{{font-size:24px;font-weight:700;color:#fff;margin-bottom:5px;letter-spacing:-
 <div id="og" class="overall-grid"></div>
 <div class="stitle">全指标品类下探</div>
 <div id="main-drill" style="display:none"></div>
-<iframe class="metric-drill-frame" src="anomaly.html?embed=1" title="全指标品类下探"></iframe>
+<iframe id="metric-drill-frame" class="metric-drill-frame" src="anomaly.html?embed=1" title="全指标品类下探"></iframe>
+<script>
+(() => {{
+  const frame = document.getElementById('metric-drill-frame');
+  const fitHeight = () => {{
+    const doc = frame.contentDocument;
+    if (doc) frame.style.height = `${{Math.max(320, doc.documentElement.scrollHeight)}}px`;
+  }};
+  frame.addEventListener('load', () => {{
+    fitHeight();
+    const doc = frame.contentDocument;
+    if (doc && window.ResizeObserver) new ResizeObserver(fitHeight).observe(doc.body);
+  }});
+}})();
+</script>
 <div id="anomaly" class="anomaly-wrap" style="display:none"></div>
 <div class="stitle">品类数据概览</div>
 <div id="cs"></div>
