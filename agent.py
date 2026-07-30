@@ -999,7 +999,7 @@ h1{{font-size:24px;font-weight:700;color:#fff;margin-bottom:5px;letter-spacing:-
 <a class="page-nav" href="anomaly.html">🚨 本周异常巡检 →</a>
 <div class="stitle">数据概览（未剔除）</div>
 <div id="og" class="overall-grid"></div>
-<div class="stitle">全指标品类下探</div>
+<div class="stitle">全指标品类下探（权重 = 品类当前周订单量 ÷ 大盘当前周总订单量）</div>
 <div id="main-drill" style="display:none"></div>
 <iframe id="metric-drill-frame" class="metric-drill-frame" src="anomaly.html?embed=1" title="全指标品类下探"></iframe>
 <script>
