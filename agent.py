@@ -82,6 +82,7 @@ METRIC_FORMULAS = {
     "新人占比最高的大区": "该大区新人订单量（on_work_days < 180天的订单数）/ 该大区总订单数，取占比最高的一个大区展示",
     "驳回≥10次工程师数": "当周 refuse_num≥10 的工程师人数",
     "复检≥10次工程师数": "当周 recheck_num≥10 的工程师人数",
+    "履约≥60min工程师数": "当周签到完结时长≥60min 的工程师人数",
 }
 
 METRIC_DAILY_LABELS = {
@@ -709,7 +710,7 @@ DRILL_CONFIG = {
     "单均签到完结时长": {"extreme": "max", "layers": ["驳回率、复检率、单均驳回次数、单均复检次数", "履约超时率", "批量场景核查"]},
     "单均首次拍照时长": {"extreme": "max", "layers": ["新人占比最高的大区"]},
     "单均拍照报价时长": {"extreme": "max", "layers": ["驳回率、复检率、单均驳回次数、单均复检次数", "批量场景核查"]},
-    "履约超时率": {"extreme": "max", "layers": ["驳回率、复检率、单均驳回次数、单均复检次数", "履约≥60min订单占比", "批量场景核查"]},
+    "履约超时率": {"extreme": "max", "layers": ["驳回率、复检率、单均驳回次数、单均复检次数", "履约≥60min订单占比", "履约≥60min工程师数", "批量场景核查"]},
     "拍照及时完成率": {"extreme": "min", "layers": ["有变化大区的拍照及时完成率"]},
     "驳回率": {"extreme": "max", "layers": ["单均驳回次数", "驳回≥10次工程师数"]},
     "复检率": {"extreme": "max", "layers": ["单均复检次数", "复检≥10次工程师数"]},
@@ -843,6 +844,18 @@ def build_metric_drill_data(df, weeks, categories):
                 counts = [count for count in counts if count >= 5]
                 batch_stats[group] = {"次数": len(counts), "单量": sum(counts)}
             row["batch"] = batch_stats
+            # 工程师异常人数必须限定在当前品类中，再按新人/老人拆分。
+            # 同一工程师在该品类命中任意订单时只计 1 人。
+            engineer_stats = {}
+            for group in groups:
+                gdf = group_df(cdf, group)
+                valid_engineer = gdf["last_admin_name"].notna()
+                engineer_stats[group] = {
+                    "驳回≥10次工程师数": int(gdf.loc[valid_engineer & (gdf["驳回次数"] >= 10), "last_admin_name"].nunique()),
+                    "复检≥10次工程师数": int(gdf.loc[valid_engineer & (gdf["复检次数"] >= 10), "last_admin_name"].nunique()),
+                    "履约≥60min工程师数": int(gdf.loc[valid_engineer & (gdf["签到完结时长"] >= 60), "last_admin_name"].nunique()),
+                }
+            row["engineer_stats"] = engineer_stats
             # 首次拍照时长下探：按当前品类计算新人占比最高的大区。
             # 历史文件中保留的是由 on_work_days 派生的「群体」字段，
             # 因此这里以 群体 == 新人 作为 on_work_days < 180 天的等价判断。
@@ -861,7 +874,7 @@ def build_metric_drill_data(df, weeks, categories):
         related = []
         for label in config["layers"]:
             if "工程师数" in label:
-                hit = "驳回≥10次" if "驳回" in label else "复检≥10次"
+                hit = "驳回≥10次" if "驳回" in label else ("复检≥10次" if "复检" in label else "单均履约时长≥60min")
                 related.append({"type": "engineer", "title": label, "values": {g: sum(1 for row in engineer_rows if hit in row["hits"] and (g == "总体" or row["group"] == g)) for g in groups}})
             elif "批量场景" in label:
                 related.append({"type": "batch", "title": label})
@@ -1487,7 +1500,7 @@ document.querySelectorAll('.matrix th').forEach(th=>{{const name=th.textContent.
     const dataFor=(row,group,col)=>{{
       if(col.key==='main')return row.segments?.[group];
       if(col.key.startsWith('metric:'))return row.details?.[group]?.[col.name];
-      if(col.key.startsWith('engineer:')){{const hit=col.name.includes('驳回')?'驳回≥10次':'复检≥10次';return {{value:D.engineerStats?.[hit]?.[group]??0,prev:null,delta:null,prev_delta:null}};}}
+      if(col.key.startsWith('engineer:'))return {{value:row.engineer_stats?.[group]?.[col.name]??0,prev:null,delta:null,prev_delta:null}};
       if(col.key==='batch'){{const item=row.batch?.[group];const display=item?.次数?`${{(item.单量/item.次数).toFixed(1)}} 单/次（${{item.次数}} 次）`:null;return {{value:display,prev:null,delta:null,prev_delta:null}};}}
       if(col.key.startsWith('region:')){{
         const item=row.newbie_top_region;
