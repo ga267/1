@@ -56,6 +56,7 @@ METRICS = [
 
 METRIC_FORMULAS = {
     "单均签到完结时长": "签到完结时长求和 / 签到单量（剔除暂停单）",
+    "签到单量": "签到时间不为空且非暂停订单数",
     "单均首次拍照时长": "首次拍照时长求和 / 拍照完成单量",
     "履约超时率": "签到完结时长≥30min 订单数 / 签到完结时长有效单量（剔除暂停单）",
     "拍照及时完成率": "首次拍照时长≤6min 订单数 / 拍照完成单量",
@@ -388,6 +389,7 @@ def calc(g):
         "多次驳回占比":     sr(g[g["多次驳回"]==1], g_reject),
         "多次复检占比":     sr(g[g["多次复检"]==1], g_recheck),
         "单均拍照报价时长":  sm(g_ns_offer["拍照报价时长"]),
+        "签到单量":          int(len(g_ns_sign)),
         "日均成交单量":      round(len(g_deal) / 7, 1),
         "日均签到单":        round(len(g_ns_sign) / 7, 1),
         "日均报价单":        round(len(g_ns_offer) / 7, 1),
@@ -820,7 +822,14 @@ def build_metric_drill_data(df, weeks, categories):
             else:
                 names=[name.strip() for name in label.split("、")]
                 related.append({"type":"metrics","title":label,"metrics":names})
-        blocks.append({"metric":metric,"value":overall_values[-1],"delta":drill_delta(overall_values,metric),"selected":selected,"related":related})
+        blocks.append({
+            "metric": metric,
+            "value": overall_values[-1],
+            "delta": drill_delta(overall_values, metric),
+            "sign_count": overall_weeks["总体"][-1].get("签到单量") if metric == "单均签到完结时长" else None,
+            "selected": selected,
+            "related": related,
+        })
     return clean_json({
         "blocks": blocks,
         "latest": latest,
@@ -1387,6 +1396,16 @@ const matrixApp=document.getElementById('app');matrixApp.innerHTML='';
 blocks.forEach(b=>{{let cols=[{{key:'main',label:b.metric}},{{key:'delta',label:'环比'}}];(b.related||[]).forEach(r=>{{if(r.type==='metrics')(r.metrics||[]).forEach(m=>cols.push({{key:m,label:m}}));else if(r.type==='engineer')cols.push({{key:'eng:'+r.title,label:r.title}});else if(r.type==='batch')cols.push({{key:'batch',label:'批量场景'}});else cols.push({{key:'region',label:r.title}});}});const rows=(b.selected||[]).map(x=>['总体','新人','老人'].map((g,i)=>{{const values=cols.map(c=>{{if(c.key==='main')return statusCell(b.metric,x.segments[g]);if(c.key==='delta')return `<span class="${{cls(x.segments[g].delta)}}" title="上周：${{value(b.metric,x.segments[g].prev)}}">${{delta(b.metric,x.segments[g].delta)}}</span>`;if(c.key.startsWith('eng:'))return `<span class="neutral">${{D.engineerStats?.[c.key.slice(4).includes('驳回')?'驳回≥10次':'复检≥10次']?.[g]??0}} 人</span>`;if(c.key==='batch'){{const z=x.batch?.[g];return `<span class="neutral" title="上周：—">${{z?z.单量+' 单 / '+z.次数+' 次':'—'}}</span>`;}}if(c.key==='region')return '<span class="neutral">—</span>';return statusCell(c.key,x.details[g][c.key]);}}).map(v=>`<td>${{v}}</td>`).join('');const label=g==='总体'?`${{x.category}}（${{x.weight}}%） <span class="${{x.source==='权重异常'?'source':'extreme'}}">${{x.source==='权重异常'?'权重Top':'极值'}}</span>`:g==='新人'?'新人（在职&lt;180天）':'老人（在职≥180天）';return `<tr class="${{i?'sub '+(g==='新人'?'new':'old'):'total'}}" data-c="${{x.category}}"><td>${{label}}</td>${{values}}</tr>`;}}).join('')).join('');const head=['品类 / 维度',...cols.map(c=>c.label)].map(x=>`<th>${{x}}</th>`).join('');matrixApp.insertAdjacentHTML('beforeend',`<details class="metric matrix" open><summary>${{b.metric}} ${{q(b.metric)}} · ${{value(b.metric,b.value)}} <span class="${{cls(b.delta)}}">${{delta(b.metric,b.delta)}}</span></summary><div class="body"><table><thead><tr>${{head}}</tr></thead><tbody>${{rows}}</tbody></table></div></details>`);}});
 document.querySelectorAll('.matrix tr.total').forEach(row=>row.addEventListener('click',()=>{{const open=row.dataset.open==='1';row.dataset.open=open?'0':'1';let next=row.nextElementSibling;while(next&&next.classList.contains('sub')){{next.style.display=open?'none':'table-row';next=next.nextElementSibling;}}}}));
 document.querySelectorAll('.matrix').forEach(matrix=>{{let rank=0;matrix.querySelectorAll('tr.total .source').forEach(tag=>{{tag.textContent=`权重Top${{++rank}}`;}});}});
+document.querySelectorAll('.matrix').forEach((matrix,index)=>{{
+  const b=blocks[index], table=matrix.querySelector('table'), head=table.rows[0];
+  const deltaIndex=[...head.cells].findIndex(cell=>cell.textContent.trim()==='环比');
+  if(deltaIndex>=0){{head.appendChild(head.cells[deltaIndex]);[...table.tBodies[0].rows].forEach(row=>row.appendChild(row.cells[deltaIndex]));}}
+  if(b.metric==='单均签到完结时长'){{
+    const metricHead=head.cells[1], countHead=document.createElement('th');countHead.textContent='签到单量';metricHead.after(countHead);
+    [...table.tBodies[0].rows].forEach(row=>{{const group=row.classList.contains('new')?'新人':row.classList.contains('old')?'老人':'总体';const item=(b.selected||[]).find(x=>x.category===row.dataset.c);const count=item?.details?.[group]?.['签到单量']?.value;const cell=document.createElement('td');cell.className='neutral';cell.textContent=count==null?'—':Number(count).toLocaleString()+' 单';row.cells[1].after(cell);}});
+    const summary=matrix.querySelector('summary'), deltaEl=summary.querySelector(':scope > span');const ring=deltaEl?.textContent||'—';if(deltaEl)deltaEl.remove();summary.append(` · 签到单量 ${{Number(b.sign_count||0).toLocaleString()}} 单（环比 ${{ring}}）`);
+  }}
+}});
 document.querySelectorAll('.matrix th').forEach(th=>{{const name=th.textContent.trim();if(name!=='品类 / 维度'&&name!=='环比'&&!th.querySelector('.q'))th.insertAdjacentHTML('beforeend',q(name));}});
 </script></body></html>'''
 
