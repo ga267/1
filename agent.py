@@ -70,7 +70,7 @@ METRIC_FORMULAS = {
     "单均复检次数": "recheck_num 求和 / 复检单量",
     "批量场景": "同一回收师同一天同用户UID下质检/成交≥5单的订单数 / 批量触发次数",
     "拍照报价率": "merchant_first_offer_price_time 不为空订单数 / first_photo_shot_complete_time 不为空订单数",
-    "单均议价时长": "（完结时间 - merchant_first_offer_price_time）均值，单位分钟",
+    "单均议价时长": "（完结时间 - merchant_first_offer_price_time）均值；分母为所有报价单（merchant_first_offer_price_time 不为空），单位分钟",
     "单均报价次数": "merchant_offer_price_cnt 均值",
     "新人占比最高大区": "该大区新人订单量 / 该大区总订单量，取占比最高的一个大区",
     "驳回≥10次工程师数": "当周 refuse_num≥10 的工程师人数",
@@ -710,6 +710,7 @@ def drill_calc(g):
     """补充指标专属下探所需的均值、比例指标。"""
     result = calc(g)
     photo = g[g["是否拍照"] == 1]
+    # 所有报价单：仅按首次报价时间是否存在筛选，不限是否成交。
     offer = g[g["是否报价"] == 1]
     valid_sign = g[(g["是否暂停"] == 0) & (g["是否签到"] == 1) & g["签到完结时长"].notna()]
     def avg(series):
