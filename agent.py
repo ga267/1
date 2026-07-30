@@ -765,9 +765,19 @@ def build_metric_drill_data(df, weeks, categories):
             for group in groups:
                 weekly_stats = category_cache[category][group]
                 vals = [row.get(metric) for row in weekly_stats]
-                segments[group] = {"value": vals[-1], "prev": vals[-2] if len(vals) > 1 else None, "delta": drill_delta(vals, metric)}
+                segments[group] = {
+                    "value": vals[-1],
+                    "prev": vals[-2] if len(vals) > 1 else None,
+                    "delta": drill_delta(vals, metric),
+                    "prev_delta": drill_delta(vals[:-1], metric),
+                }
                 details[group] = {
-                    name: {"value": rows[-1], "prev": rows[-2] if len(rows) > 1 else None, "delta": drill_delta(rows, name)}
+                    name: {
+                        "value": rows[-1],
+                        "prev": rows[-2] if len(rows) > 1 else None,
+                        "delta": drill_delta(rows, name),
+                        "prev_delta": drill_delta(rows[:-1], name),
+                    }
                     for name, rows in {
                         name: [stat.get(name) for stat in weekly_stats]
                         for name in weekly_stats[-1]
@@ -827,6 +837,7 @@ def build_metric_drill_data(df, weeks, categories):
             "value": overall_values[-1],
             "delta": drill_delta(overall_values, metric),
             "sign_count": overall_weeks["总体"][-1].get("签到单量") if metric == "单均签到完结时长" else None,
+            "sign_delta": drill_delta([row.get("签到单量") for row in overall_weeks["总体"]], "签到单量") if metric == "单均签到完结时长" else None,
             "selected": selected,
             "related": related,
         })
@@ -1407,6 +1418,39 @@ document.querySelectorAll('.matrix').forEach((matrix,index)=>{{
   }}
 }});
 document.querySelectorAll('.matrix th').forEach(th=>{{const name=th.textContent.trim();if(name!=='品类 / 维度'&&name!=='环比'&&!th.querySelector('.q'))th.insertAdjacentHTML('beforeend',q(name));}});
+</script><script>
+/* 指标值与环比成对排列；该脚本覆盖旧矩阵，确保每列紧跟对应环比。 */
+(() => {{
+  const app=document.getElementById('app'); app.innerHTML='';
+  const positive=new Set(['拍照及时完成率','报价成交率']);
+  const fmt=(name,value)=>{{if(value==null)return '—';if(name==='签到单量')return Number(value).toLocaleString()+' 单';if(name.includes('工程师数'))return value+' 人';if(name==='批量场景')return value;if(rate.has(name))return value+'%';if(name.includes('时长'))return value+'min';return String(value);}};
+  const dFmt=(name,value)=>{{if(value==null)return '—';return `${{value>0?'▲':'▼'}}${{Math.abs(value).toFixed(1)}}${{rate.has(name)?'pp':'%'}}`;}};
+  const state=(name,value,prev)=>{{if(value==null||prev==null||value===prev)return 'neutral';const better=positive.has(name)?value>prev:value<prev;return better?'good':'bad';}};
+  const valueCell=(name,obj)=>{{const previous=obj?.prev;const current=obj?.value;return `<td title="上周：${{fmt(name,previous)}}"><span class="${{state(name,current,previous)}}">${{fmt(name,current)}}</span></td>`;}};
+  const deltaCell=(name,obj)=>{{const previousDelta=obj?.prev_delta;return `<td title="上周环比：${{dFmt(name,previousDelta)}}"><span class="${{state(name,obj?.value,obj?.prev)}}">${{dFmt(name,obj?.delta)}}</span></td>`;}};
+  const buildColumns=b=>{{const cols=[{{key:'main',name:b.metric}}];if(b.metric==='单均签到完结时长')cols.push({{key:'sign_count',name:'签到单量'}});(b.related||[]).forEach(r=>{{if(r.type==='metrics')(r.metrics||[]).forEach(m=>cols.push({{key:'metric:'+m,name:m}}));else if(r.type==='engineer')cols.push({{key:'engineer:'+r.title,name:r.title}});else if(r.type==='batch')cols.push({{key:'batch',name:'批量场景'}});else cols.push({{key:'region:'+r.title,name:r.title}});}});return cols;}};
+  blocks.forEach(b=>{{
+    const cols=buildColumns(b);
+    const header='<th>品类 / 维度</th>'+cols.map(c=>`<th>${{c.name}} ${{q(c.name)}}</th><th>环比</th>`).join('');
+    const dataFor=(row,group,col)=>{{
+      if(col.key==='main')return row.segments?.[group];
+      if(col.key==='sign_count')return row.details?.[group]?.['签到单量'];
+      if(col.key.startsWith('metric:'))return row.details?.[group]?.[col.name];
+      if(col.key.startsWith('engineer:')){{const hit=col.name.includes('驳回')?'驳回≥10次':'复检≥10次';return {{value:D.engineerStats?.[hit]?.[group]??0,prev:null,delta:null,prev_delta:null}};}}
+      if(col.key==='batch'){{const item=row.batch?.[group];return {{value:item?item.单量+' 单 / '+item.次数+' 次':null,prev:null,delta:null,prev_delta:null}};}}
+      return {{value:null,prev:null,delta:null,prev_delta:null}};
+    }};
+    const rows=(b.selected||[]).map(row=>['总体','新人','老人'].map((group,index)=>{{
+      const label=group==='总体'?`${{row.category}}（${{row.weight}}%） <span class="${{row.source==='权重异常'?'source':'extreme'}}">${{row.source==='权重异常'?'权重Top':'极值'}}</span>`:(group==='新人'?'新人（在职&lt;180天）':'老人（在职≥180天）');
+      const cells=cols.map(col=>{{const obj=dataFor(row,group,col);return valueCell(col.name,obj)+deltaCell(col.name,obj);}}).join('');
+      return `<tr class="${{index?'sub '+(group==='新人'?'new':'old'):'total'}}" data-c="${{row.category}}"><td>${{label}}</td>${{cells}}</tr>`;
+    }}).join('')).join('');
+    const extra=b.metric==='单均签到完结时长'?` · 签到单量 ${{Number(b.sign_count||0).toLocaleString()}} 单（环比 ${{dFmt('签到单量',b.sign_delta)}}）`:'';
+    app.insertAdjacentHTML('beforeend',`<details class="metric matrix" open><summary>${{b.metric}} ${{q(b.metric)}} · ${{fmt(b.metric,b.value)}} <span class="${{state(b.metric,b.value,b.value-(b.delta||0))}}">${{dFmt(b.metric,b.delta)}}</span>${{extra}}</summary><div class="body"><table><thead><tr>${{header}}</tr></thead><tbody>${{rows}}</tbody></table></div></details>`);
+  }});
+  document.querySelectorAll('.matrix tr.total').forEach(row=>row.addEventListener('click',()=>{{const opened=row.dataset.open==='1';row.dataset.open=opened?'0':'1';let next=row.nextElementSibling;while(next&&next.classList.contains('sub')){{next.style.display=opened?'none':'table-row';next=next.nextElementSibling;}}}}));
+  document.querySelectorAll('.matrix').forEach(matrix=>{{let rank=0;matrix.querySelectorAll('tr.total .source').forEach(tag=>tag.textContent=`权重Top${{++rank}}`);}});
+}})();
 </script></body></html>'''
 
 def send_feishu_notification(latest_week_label, html_path, page_name="履约效率&质量看板", emoji="📊"):
