@@ -25,6 +25,11 @@ from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import JSONResponse
 import uvicorn
 
+try:
+    from zhipuai import ZhipuAI
+except ModuleNotFoundError:  # 方便在未安装依赖时给出明确提示。
+    ZhipuAI = None
+
 import agent
 
 
@@ -36,8 +41,8 @@ load_dotenv(PROJECT_DIR / ".env")
 APP_ID = os.getenv("FEISHU_APP_ID")
 APP_SECRET = os.getenv("FEISHU_APP_SECRET")
 VERIFICATION_TOKEN = os.getenv("FEISHU_VERIFICATION_TOKEN", "")
-ANTHROPIC_API_KEY = os.getenv("ANTHROPIC_API_KEY")
-CLAUDE_MODEL = os.getenv("CLAUDE_MODEL", "claude-sonnet-4-20250514")
+ZHIPUAI_API_KEY = os.getenv("ZHIPUAI_API_KEY")
+ZHIPUAI_MODEL = os.getenv("ZHIPUAI_MODEL", "glm-4-flash")
 HOST = os.getenv("CHATBOT_HOST", "127.0.0.1")
 PORT = int(os.getenv("CHATBOT_PORT", "8080"))
 
@@ -107,7 +112,7 @@ def _compact_weekly(weekly: dict[str, dict[str, Any]]) -> dict[str, dict[str, An
 def build_dashboard_context() -> dict[str, Any]:
     """把本地订单明细压缩为问题回答所需的聚合上下文。
 
-    不向 Claude 发送订单级数据、用户 UID 或工程师姓名，避免敏感数据外发且保持请求体稳定。
+    不向模型发送订单级数据、用户 UID 或工程师姓名，避免敏感数据外发且保持请求体稳定。
     """
     if not HISTORY_PATH.exists():
         raise FileNotFoundError(f"未找到历史数据：{HISTORY_PATH}")
@@ -159,40 +164,31 @@ def build_dashboard_context() -> dict[str, Any]:
         return context
 
 
-def call_claude(question: str) -> str:
-    if not ANTHROPIC_API_KEY:
-        raise RuntimeError("未配置 ANTHROPIC_API_KEY，无法调用 Claude API")
+def call_zhipuai(question: str) -> str:
+    if ZhipuAI is None:
+        raise RuntimeError("未安装 zhipuai，请先执行 .venv/bin/pip install -r requirements-chatbot.txt")
+    if not ZHIPUAI_API_KEY:
+        raise RuntimeError("未配置 ZHIPUAI_API_KEY，无法调用智谱 API")
 
     context = build_dashboard_context()
-    response = requests.post(
-        "https://api.anthropic.com/v1/messages",
-        headers={
-            "x-api-key": ANTHROPIC_API_KEY,
-            "anthropic-version": "2023-06-01",
-            "content-type": "application/json",
-        },
-        json={
-            "model": CLAUDE_MODEL,
-            "max_tokens": 900,
-            "system": SYSTEM_PROMPT,
-            "messages": [{
-                "role": "user",
-                "content": "当前聚合数据：\n"
-                + json.dumps(context, ensure_ascii=False, separators=(",", ":"))
-                + f"\n\n用户问题：{question}",
-            }],
-        },
-        timeout=90,
+    user_message = (
+        "当前聚合数据：\n"
+        + json.dumps(context, ensure_ascii=False, separators=(",", ":"))
+        + f"\n\n用户问题：{question}"
     )
-    payload = response.json()
-    if response.status_code >= 400:
-        logger.error("Claude API error: %s", payload.get("error", {}).get("message", response.text))
-        raise RuntimeError("Claude API 调用失败，请稍后重试")
-    answer = "".join(
-        block.get("text", "")
-        for block in payload.get("content", [])
-        if block.get("type") == "text"
-    ).strip()
+    try:
+        client = ZhipuAI(api_key=ZHIPUAI_API_KEY)
+        response = client.chat.completions.create(
+            model=ZHIPUAI_MODEL,
+            messages=[
+                {"role": "system", "content": SYSTEM_PROMPT},
+                {"role": "user", "content": user_message},
+            ],
+        )
+    except Exception as exc:
+        logger.error("智谱 API 调用失败：%s", exc)
+        raise RuntimeError("智谱 API 调用失败，请稍后重试") from exc
+    answer = (response.choices[0].message.content or "").strip()
     return answer or "没有生成可用回答。"
 
 
@@ -231,9 +227,9 @@ def send_text_reply(chat_id: str, text: str) -> None:
 
 
 def answer_and_reply(question: str, chat_id: str) -> None:
-    """在后台处理 Claude 请求，避免飞书因回调超时而重复投递事件。"""
+    """在后台处理模型请求，避免飞书因回调超时而重复投递事件。"""
     try:
-        answer = call_claude(question)
+        answer = call_zhipuai(question)
     except Exception as exc:
         logger.exception("问答处理失败")
         answer = f"暂时无法回答：{exc}"
@@ -302,7 +298,7 @@ async def feishu_events(request: Request) -> JSONResponse:
     if not question or not chat_id:
         return JSONResponse({"code": 0})
 
-    # 飞书事件回调需及时返回 2xx；Claude 调用在后台完成后再回复原会话。
+    # 飞书事件回调需及时返回 2xx；模型调用在后台完成后再回复原会话。
     threading.Thread(target=answer_and_reply, args=(question[:2000], chat_id), daemon=True).start()
     return JSONResponse({"code": 0})
 
@@ -311,7 +307,7 @@ if __name__ == "__main__":
     missing = [name for name, value in {
         "FEISHU_APP_ID": APP_ID,
         "FEISHU_APP_SECRET": APP_SECRET,
-        "ANTHROPIC_API_KEY": ANTHROPIC_API_KEY,
+        "ZHIPUAI_API_KEY": ZHIPUAI_API_KEY,
     }.items() if not value]
     if missing:
         raise SystemExit("缺少配置：" + ", ".join(missing))

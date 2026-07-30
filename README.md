@@ -6,9 +6,9 @@ GitHub Pages 发布文件为根目录的 `index.html`。运行 `agent.py` 后会
 
 ## 飞书数据问答机器人
 
-`chatbot.py` 是按需启动的本地服务：它读取 `dashboard_output/history_data.json`，在本机聚合近六周大盘、品类、新人/老人及异常数据，再发送聚合结果给 Claude 回答问题。不会将订单明细、用户 UID 或工程师姓名传给 Claude。
+`chatbot.py` 是按需启动的本地服务：它读取 `dashboard_output/history_data.json`，在本机聚合近六周大盘、品类、新人/老人及异常数据，再发送聚合结果给智谱 GLM-4-Flash 回答问题。不会发送订单明细、用户 UID 或工程师姓名。
 
-1. 将 `chatbot.env.example` 中的键名补充至本机 `.env`，至少设置 `ANTHROPIC_API_KEY`；可选设置 `FEISHU_VERIFICATION_TOKEN`。
+1. 将 `chatbot.env.example` 中的键名补充至本机 `.env`，至少设置 `ZHIPUAI_API_KEY`；可选设置 `FEISHU_VERIFICATION_TOKEN`。API Key 在 [智谱开放平台](https://open.bigmodel.cn) 申请。
 2. 安装并启动：
 
    ```bash
