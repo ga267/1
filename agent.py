@@ -733,6 +733,25 @@ def drill_delta(values, metric):
         return None
     return round(values[-1] - values[-2], 1) if metric in DRILL_RATE_METRICS else round((values[-1] - values[-2]) / abs(values[-2]) * 100, 1)
 
+def drill_bad_streak(values, metric):
+    """从最新周倒推连续恶化次数；订单量、批量量等非质量指标不标趋势。"""
+    if metric in {"签到单量", "日均成交单量", "日均签到单", "日均报价单", "日均成交单",
+                  "日均拍照完成单", "日均超时单", "日均及时完成单", "日均驳回单",
+                  "日均复检单", "日均多次驳回单", "日均多次复检单"}:
+        return 0
+    streak = 0
+    # 完成率、成交率下降为恶化；其余质量、时长、次数指标上升为恶化。
+    worsens_when_down = metric in DRILL_BAD_DOWN
+    for index in range(len(values) - 1, 0, -1):
+        current, previous = values[index], values[index - 1]
+        if current is None or previous is None or current == previous:
+            break
+        worsening = current < previous if worsens_when_down else current > previous
+        if not worsening:
+            break
+        streak += 1
+    return streak
+
 def drill_value(metric, value):
     if value is None: return "—"
     if metric in DRILL_RATE_METRICS or metric in RATE_METRIC_NAMES: return f"{value}%"
@@ -771,6 +790,7 @@ def build_metric_drill_data(df, weeks, categories):
                     "prev": vals[-2] if len(vals) > 1 else None,
                     "delta": drill_delta(vals, metric),
                     "prev_delta": drill_delta(vals[:-1], metric),
+                    "bad_streak": drill_bad_streak(vals, metric),
                 }
                 details[group] = {
                     name: {
@@ -778,6 +798,7 @@ def build_metric_drill_data(df, weeks, categories):
                         "prev": rows[-2] if len(rows) > 1 else None,
                         "delta": drill_delta(rows, name),
                         "prev_delta": drill_delta(rows[:-1], name),
+                        "bad_streak": drill_bad_streak(rows, name),
                     }
                     for name, rows in {
                         name: [stat.get(name) for stat in weekly_stats]
@@ -1401,7 +1422,7 @@ b.related.forEach((r,i)=>{{if(r.type==='metrics'){{const rows=b.selected.map(x=>
 app.insertAdjacentHTML('beforeend',`<details class="metric" open><summary>${{b.metric}} ${{q(b.metric)}} · ${{value(b.metric,b.value)}} · <span class="${{cls(b.delta)}}">${{delta(b.metric,b.delta)}} ${{status}}</span></summary>${{layers}}</details>`);}});
 </script><script>
 /* 表格矩阵视图：品类分组，整体/新人/老人三行。 */
-document.head.insertAdjacentHTML('beforeend','<style>.matrix{{margin:10px 0}}.matrix .body{{padding:0;max-height:none}}.matrix th:first-child,.matrix td:first-child{{position:sticky;left:0;z-index:2}}.matrix th:first-child{{background:#1a2035}}.matrix td:first-child{{background:#1e2540}}.matrix tr.sub{{display:none;background:#181b26;font-size:11px}}.matrix tr.sub td{{color:#9ba0bc}}.matrix tr.new td:first-child{{border-left:3px solid #fb7185;color:#fb7185}}.matrix tr.old td:first-child{{border-left:3px solid #34d399;color:#34d399}}.matrix tr.total td:first-child{{border-left:3px solid #6366f1}}.matrix tr.total{{cursor:pointer}}.matrix .source{{color:#fbbf24;font-size:10px}}.matrix .extreme{{color:#7b80a0;font-size:10px}}</style>');
+document.head.insertAdjacentHTML('beforeend','<style>.matrix{{margin:10px 0}}.matrix .body{{padding:0;max-height:none}}.matrix th:first-child,.matrix td:first-child{{position:sticky;left:0;z-index:2}}.matrix th:first-child{{background:#1a2035}}.matrix td:first-child{{background:#1e2540}}.matrix tr.sub{{display:none;background:#181b26;font-size:11px}}.matrix tr.sub td{{color:#9ba0bc}}.matrix tr.new td:first-child{{border-left:3px solid #fb7185;color:#fb7185}}.matrix tr.old td:first-child{{border-left:3px solid #34d399;color:#34d399}}.matrix tr.total td:first-child{{border-left:3px solid #6366f1}}.matrix tr.total{{cursor:pointer}}.matrix .source{{color:#fbbf24;font-size:10px}}.matrix .extreme{{color:#7b80a0;font-size:10px}}.matrix .trend{{margin-left:4px;color:#f59e0b;font-size:10px;white-space:nowrap}}</style>');
 const badDown2=new Set(['拍照及时完成率','报价成交率']);
 const statusCell=(metric,obj)=>{{if(!obj||obj.value==null)return '<span class="neutral" title="上周：—">—</span>';const prev=obj.prev;const diff=prev==null?0:obj.value-prev;const good=badDown2.has(metric)?diff>0:diff<0;const color=diff===0?'neutral':good?'good':'bad';return `<span class="${{color}}" title="上周：${{value(metric,prev)}}">${{value(metric,obj.value)}}</span>`;}};
 const matrixApp=document.getElementById('app');matrixApp.innerHTML='';
@@ -1429,7 +1450,7 @@ document.querySelectorAll('.matrix th').forEach(th=>{{const name=th.textContent.
   const state=(name,value,prev)=>{{if(value==null||prev==null||value===prev)return 'neutral';const better=positive.has(name)?value>prev:value<prev;return better?'good':'bad';}};
   const valueCell=(name,obj)=>{{const previous=obj?.prev;const current=obj?.value;return `<td title="上周：${{fmt(name,previous)}}"><span class="${{state(name,current,previous)}}">${{fmt(name,current)}}</span></td>`;}};
   const deltaCell=(name,obj)=>{{const previousDelta=obj?.prev_delta;return `<td title="上周环比：${{dFmt(name,previousDelta)}}"><span class="${{state(name,obj?.value,obj?.prev)}}">${{dFmt(name,obj?.delta)}}</span></td>`;}};
-  const combinedCell=(name,obj)=>{{const previous=obj?.prev,current=obj?.value,change=obj?.delta;const deltaText=change==null?'':`（<span class="${{state(name,current,previous)}}">${{dFmt(name,change)}}</span>）`;return `<td title="上周：${{fmt(name,previous)}}"><span class="${{state(name,current,previous)}}">${{fmt(name,current)}}</span>${{deltaText}}</td>`;}};
+  const combinedCell=(name,obj)=>{{const previous=obj?.prev,current=obj?.value,change=obj?.delta;const deltaText=change==null?'':`（<span class="${{state(name,current,previous)}}">${{dFmt(name,change)}}</span>）`;const trend=obj?.bad_streak>=2?`<span class="trend">「连续${{obj.bad_streak}}周${{positive.has(name)?'↓':'↑'}}」</span>`:'';return `<td title="上周：${{fmt(name,previous)}}"><span class="${{state(name,current,previous)}}">${{fmt(name,current)}}</span>${{deltaText}}${{trend}}</td>`;}};
   const buildColumns=b=>{{const cols=[{{key:'main',name:b.metric}}];if(b.metric==='单均签到完结时长')cols.push({{key:'sign_count',name:'签到单量'}});(b.related||[]).forEach(r=>{{if(r.type==='metrics')(r.metrics||[]).forEach(m=>cols.push({{key:'metric:'+m,name:m}}));else if(r.type==='engineer')cols.push({{key:'engineer:'+r.title,name:r.title}});else if(r.type==='batch')cols.push({{key:'batch',name:'批量场景'}});else cols.push({{key:'region:'+r.title,name:r.title}});}});return cols;}};
   blocks.forEach(b=>{{
     const cols=buildColumns(b);
