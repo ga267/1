@@ -973,12 +973,14 @@ h1{{font-size:24px;font-weight:700;color:#fff;margin-bottom:5px;letter-spacing:-
 .card svg{{width:100%;display:block}}
 .card svg.main-spark{{height:46px}}
 .card svg.daily-spark{{height:26px;margin-top:2px;opacity:.75}}
-.cate-table{{width:100%;border-collapse:separate;border-spacing:0;background:#222a45;border:1px solid #28334f;border-radius:12px;overflow:hidden}}
-.cate-table th{{background:#1a2035;color:#8890b0;font-size:12px;font-weight:600;padding:12px 10px;text-align:left;border-bottom:1px solid #28334f;white-space:nowrap;position:sticky;top:0;z-index:10}}
-.cate-table th.rh{{position:sticky;text-align:left;min-width:150px;padding-left:16px}}
+.cate-table{{width:100%;border-collapse:separate;border-spacing:0;background:#222a45;border:1px solid #28334f;border-radius:12px;overflow:visible}}
+.cate-table th{{background:#1a2035;color:#8890b0;font-size:12px;font-weight:600;padding:12px 10px;text-align:left;border-bottom:1px solid #2e3a5c;white-space:nowrap;position:sticky;top:0;z-index:10}}
+.cate-table th.rh{{position:sticky;top:0;left:0;z-index:15;text-align:left;min-width:150px;padding-left:16px;border-right:1px solid #2e3a5c}}
 .cate-table th.rh::before{{content:'';position:absolute;left:0;top:0;bottom:0;width:3px;border-radius:0 2px 2px 0;background:#6366f1}}
 .cate-head-note{{margin-top:2px;color:#6370a0;font-size:10px;font-weight:400;line-height:1.2}}
 .cate-table td{{border-bottom:1px solid #28334f;padding:0;vertical-align:middle;text-align:left}}
+.cate-table tbody td:first-child{{position:sticky;left:0;z-index:5;background:#1a2035;border-right:1px solid #2e3a5c}}
+.cate-table tbody td:first-child .rl-total,.cate-table tbody td:first-child .rl-newbie,.cate-table tbody td:first-child .rl-senior{{background:#1a2035}}
 .cate-table tr:last-child td{{border-bottom:0}}
 .rl-total{{position:relative;font-size:14px;font-weight:700;color:#e0e4f4;background:#222a45;padding:12px 14px 12px 18px;white-space:nowrap;text-align:left}}
 .rl-total::before{{content:'';position:absolute;left:0;top:0;bottom:0;width:3px;border-radius:0 2px 2px 0;background:#6366f1}}
@@ -1025,7 +1027,7 @@ h1{{font-size:24px;font-weight:700;color:#fff;margin-bottom:5px;letter-spacing:-
 .anomaly-table th{{padding:9px 10px;color:#8890b0;background:#1a2035;border-bottom:1px solid #28334f;text-align:left;font-weight:600;white-space:nowrap}}
 .anomaly-table td{{padding:9px 10px;color:#c8cce0;border-bottom:1px solid #28334f;vertical-align:top}}
 .anomaly-table tr:last-child td{{border-bottom:0}}
-.metric-drill-frame{{width:100%;height:800px;border:1px solid #2e3a5c;border-radius:12px;background:#161b2e;display:block}}
+.metric-drill-frame{{width:100%;height:1px;border:1px solid #2e3a5c;border-radius:12px;background:#161b2e;display:block}}
 .tag{{display:inline-block;padding:2px 6px;margin:1px 3px 1px 0;border-radius:4px;background:#402633;color:#ff8a8a;font-size:10px;white-space:nowrap}}
 .tag.good{{background:#173c35;color:#62e0ab}}
 .empty-state{{color:#7b80a0;font-size:12px;padding:6px 0}}
@@ -1040,23 +1042,8 @@ h1{{font-size:24px;font-weight:700;color:#fff;margin-bottom:5px;letter-spacing:-
 <a class="page-nav" href="anomaly.html">🚨 本周异常巡检 →</a>
 <div class="stitle">数据概览（未剔除）</div>
 <div id="og" class="overall-grid"></div>
-<div class="drill-heading"><div class="stitle">全指标品类下探</div><div class="drill-note">权重 = 品类当前周订单量 ÷ 大盘当前周总订单量<br>权重Top：权重最大且本周指标环比变差的前5个品类 ｜ 极值：本周指标绝对值最差的前2个品类</div></div>
+<!-- 全指标品类下探统一保留在 anomaly.html（第二页）；此容器仅兼容旧脚本，不在主看板展示。 -->
 <div id="main-drill" style="display:none"></div>
-<iframe id="metric-drill-frame" class="metric-drill-frame" src="anomaly.html?embed=1" title="全指标品类下探"></iframe>
-<script>
-(() => {{
-  const frame = document.getElementById('metric-drill-frame');
-  const fitHeight = () => {{
-    const doc = frame.contentDocument;
-    if (doc) frame.style.height = `${{Math.max(320, doc.documentElement.scrollHeight)}}px`;
-  }};
-  frame.addEventListener('load', () => {{
-    fitHeight();
-    const doc = frame.contentDocument;
-    if (doc && window.ResizeObserver) new ResizeObserver(fitHeight).observe(doc.body);
-  }});
-}})();
-</script>
 <div id="anomaly" class="anomaly-wrap" style="display:none"></div>
 <div class="stitle">品类数据概览</div>
 <div id="cs"></div>
@@ -1487,7 +1474,7 @@ document.querySelectorAll('.matrix th').forEach(th=>{{const name=th.textContent.
   const app=document.getElementById('app'); app.innerHTML='';
   const positive=new Set(['拍照及时完成率','报价成交率']);
   const denominatorByMetric={{'单均签到完结时长':'有效签到单量','单均拍照报价时长':'报价单量','单均首次拍照时长':'拍照完成单量','履约超时率':'有效签到单量','拍照及时完成率':'拍照完成单量','驳回率':'拍照完成单量','报价成交率':'报价单量','复检率':'拍照完成单量','多次驳回占比':'驳回单量','多次复检占比':'复检单量'}};
-  const fmt=(name,value)=>{{if(value==null)return '—';if(name.endsWith('单量'))return Number(value).toLocaleString()+' 单';if(name.includes('工程师数'))return value+' 人';if(name==='批量场景'||name==='批量次均单量')return value;if(rate.has(name))return value+'%';if(name.includes('时长'))return value+'min';return String(value);}};
+  const fmt=(name,value)=>{{if(value==null)return '—';if(name==='批量场景'||name==='批量次均单量')return value;if(name.endsWith('单量'))return Number(value).toLocaleString()+' 单';if(name.includes('工程师数'))return value+' 人';if(rate.has(name))return value+'%';if(name.includes('时长'))return value+'min';return String(value);}};
   const dFmt=(name,value)=>{{if(value==null)return '—';return `${{value>0?'▲':'▼'}}${{Math.abs(value).toFixed(1)}}${{rate.has(name)?'pp':'%'}}`;}};
   const state=(name,value,prev)=>{{if(value==null||prev==null||value===prev)return 'neutral';const better=positive.has(name)?value>prev:value<prev;return better?'good':'bad';}};
   const valueCell=(name,obj)=>{{const previous=obj?.prev;const current=obj?.value;return `<td title="上周：${{fmt(name,previous)}}"><span class="${{state(name,current,previous)}}">${{fmt(name,current)}}</span></td>`;}};
@@ -1501,7 +1488,15 @@ document.querySelectorAll('.matrix th').forEach(th=>{{const name=th.textContent.
       if(col.key==='main')return row.segments?.[group];
       if(col.key.startsWith('metric:'))return row.details?.[group]?.[col.name];
       if(col.key.startsWith('engineer:'))return {{value:row.engineer_stats?.[group]?.[col.name]??0,prev:null,delta:null,prev_delta:null}};
-      if(col.key==='batch'){{const item=row.batch?.[group];const display=item?.次数?`${{(item.单量/item.次数).toFixed(1)}} 单/次（${{item.次数}} 次）`:null;return {{value:display,prev:null,delta:null,prev_delta:null}};}}
+      if(col.key==='batch'){{
+        const item=row.batch?.[group];
+        const volume=Number(item?.单量), times=Number(item?.次数);
+        // 历史 JSON 中缺失或非数值的批量字段不参与计算，避免页面出现 NaN。
+        const display=Number.isFinite(volume)&&Number.isFinite(times)&&times>0
+          ? `${{(volume/times).toFixed(1)}} 单/次（${{times}} 次）`
+          : null;
+        return {{value:display,prev:null,delta:null,prev_delta:null}};
+      }}
       if(col.key.startsWith('region:')){{
         const item=row.newbie_top_region;
         const display=item?`${{item.name}} ${{item.share}}%（${{item.newcomer_orders}}/${{item.total_orders}}单）`:null;
