@@ -2,7 +2,7 @@
 """
 履约效率&质量看板 Agent
 执行时间：每周一 10:00 自动运行
-数据范围：最近6周滚动窗口
+数据范围：最近13周滚动窗口（约3个月）
 数据源：飞书邮件附件（关键词匹配：聚合上门宽表明细（近7天））
 输出路径：dashboard_output/履约效率_质量看板_YYYYMMDD.html
 历史数据：dashboard_output/history_data.json.gz（压缩存储）
@@ -32,6 +32,7 @@ HISTORY_DATA_PATH = OUTPUT_DIR / "history_data.json.gz"
 # 仅用于一次性迁移旧格式；压缩文件验证后可安全移除。
 UNCOMPRESSED_HISTORY_DATA_PATH = OUTPUT_DIR / "history_data.json"
 LEGACY_HISTORY_DATA_PATH = OUTPUT_DIR / "履约历史数据.pkl"
+KEEP_WEEKS = 13  # 保留历史周数，约3个月
 HISTORY_COLUMNS = [
     "order_id", "sign_time", "create_time", "cancel_time", "finish_time", "increment_type_id",
     "签到时间", "完结时间", "admin_quality_cate_name", "last_admin_name", "user_id",
@@ -370,14 +371,14 @@ def merge_history(new_df):
         df = new_df.copy()
         print(f"📚 未找到历史数据，已以本次附件建立基线：{len(df)} 条")
 
-    recent_weeks = sorted(df["week"].dropna().unique())[-6:]
+    recent_weeks = sorted(df["week"].dropna().unique())[-KEEP_WEEKS:]
     df = df[df["week"].isin(recent_weeks)].copy()
     history_columns = [column for column in HISTORY_COLUMNS if column in df.columns]
     history_df = df[history_columns].copy()
     tmp_path = HISTORY_DATA_PATH.with_name(HISTORY_DATA_PATH.name + ".tmp")
     history_df.to_json(tmp_path, orient="records", force_ascii=False, date_format="iso", compression="gzip")
     tmp_path.replace(HISTORY_DATA_PATH)
-    print(f"📚 已保留最近 6 周：{'、'.join(recent_weeks)}")
+    print(f"📚 已保留最近 {KEEP_WEEKS} 周：{'、'.join(recent_weeks)}")
     print(f"📚 历史数据已更新：{HISTORY_DATA_PATH.resolve()}")
     return df
 
