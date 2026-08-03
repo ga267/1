@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """
 履约效率&质量看板 Agent
 执行时间：每周一 10:00 自动运行
@@ -861,14 +862,16 @@ def build_metric_drill_data(df, weeks, categories):
             # 因此这里以 群体 == 新人 作为 on_work_days < 180 天的等价判断。
             region_stats = []
             for region, rdf in cdf.dropna(subset=["region_name"]).groupby("region_name"):
-                total_orders = len(rdf)
+                # Keep the outer total_orders (latest-week dashboard order volume)
+                # intact: it is the denominator used for every category weight.
+                region_total_orders = len(rdf)
                 newcomer_orders = int((rdf["群体"] == "新人").sum())
-                if total_orders:
+                if region_total_orders:
                     region_stats.append({
                         "name": region,
                         "newcomer_orders": newcomer_orders,
-                        "total_orders": int(total_orders),
-                        "share": round(newcomer_orders / total_orders * 100, 1),
+                        "total_orders": int(region_total_orders),
+                        "share": round(newcomer_orders / region_total_orders * 100, 1),
                     })
             row["newbie_top_region"] = max(region_stats, key=lambda item: item["share"]) if region_stats else None
         related = []
