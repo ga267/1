@@ -5,7 +5,7 @@
 数据范围：最近6周滚动窗口
 数据源：飞书邮件附件（关键词匹配：聚合上门宽表明细（近7天））
 输出路径：dashboard_output/履约效率_质量看板_YYYYMMDD.html
-历史数据：dashboard_output/history_data.json
+历史数据：dashboard_output/history_data.json.gz（压缩存储）
 """
 
 import os, sys, json, secrets, threading, random, shutil, subprocess, requests, pandas as pd, numpy as np, html as html_lib
@@ -27,8 +27,10 @@ OAUTH_REDIRECT_URI = os.getenv("FEISHU_OAUTH_REDIRECT_URI", "http://127.0.0.1:87
 OUTPUT_DIR = Path(__file__).resolve().parent / "dashboard_output"
 PROJECT_DIR = Path(__file__).resolve().parent
 PUBLISH_PATH = PROJECT_DIR / "index.html"
-# 持久化最近 6 周的已清洗数据；新附件合并后自动滚动淘汰更早周。
-HISTORY_DATA_PATH = OUTPUT_DIR / "history_data.json"
+# 持久化最近 6 周的已清洗数据；使用 gzip 压缩以节省本地磁盘空间。
+HISTORY_DATA_PATH = OUTPUT_DIR / "history_data.json.gz"
+# 仅用于一次性迁移旧格式；压缩文件验证后可安全移除。
+UNCOMPRESSED_HISTORY_DATA_PATH = OUTPUT_DIR / "history_data.json"
 LEGACY_HISTORY_DATA_PATH = OUTPUT_DIR / "履约历史数据.pkl"
 HISTORY_COLUMNS = [
     "order_id", "sign_time", "create_time", "cancel_time", "finish_time", "increment_type_id",
@@ -347,12 +349,19 @@ def merge_history(new_df):
     """将本周清洗后的数据追加到本地历史数据，不覆盖既有明细。"""
     OUTPUT_DIR.mkdir(exist_ok=True)
     if HISTORY_DATA_PATH.exists():
-        history_df = pd.read_json(HISTORY_DATA_PATH, orient="records")
+        history_df = pd.read_json(HISTORY_DATA_PATH, orient="records", compression="gzip")
         for col in ["sign_time", "create_time", "cancel_time", "finish_time", "签到时间", "完结时间"]:
             if col in history_df.columns:
                 history_df[col] = pd.to_datetime(history_df[col], errors="coerce")
         df = pd.concat([history_df, new_df], ignore_index=True)
         print(f"📚 已加载历史数据：{len(history_df)} 条；本次新增：{len(new_df)} 条")
+    elif UNCOMPRESSED_HISTORY_DATA_PATH.exists():
+        history_df = pd.read_json(UNCOMPRESSED_HISTORY_DATA_PATH, orient="records")
+        for col in ["sign_time", "create_time", "cancel_time", "finish_time", "签到时间", "完结时间"]:
+            if col in history_df.columns:
+                history_df[col] = pd.to_datetime(history_df[col], errors="coerce")
+        df = pd.concat([history_df, new_df], ignore_index=True)
+        print(f"📚 已从未压缩历史文件迁移：{len(history_df)} 条；本次新增：{len(new_df)} 条")
     elif LEGACY_HISTORY_DATA_PATH.exists():
         history_df = pd.read_pickle(LEGACY_HISTORY_DATA_PATH)
         df = pd.concat([history_df, new_df], ignore_index=True)
@@ -365,8 +374,8 @@ def merge_history(new_df):
     df = df[df["week"].isin(recent_weeks)].copy()
     history_columns = [column for column in HISTORY_COLUMNS if column in df.columns]
     history_df = df[history_columns].copy()
-    tmp_path = HISTORY_DATA_PATH.with_suffix(".tmp")
-    history_df.to_json(tmp_path, orient="records", force_ascii=False, date_format="iso")
+    tmp_path = HISTORY_DATA_PATH.with_name(HISTORY_DATA_PATH.name + ".tmp")
+    history_df.to_json(tmp_path, orient="records", force_ascii=False, date_format="iso", compression="gzip")
     tmp_path.replace(HISTORY_DATA_PATH)
     print(f"📚 已保留最近 6 周：{'、'.join(recent_weeks)}")
     print(f"📚 历史数据已更新：{HISTORY_DATA_PATH.resolve()}")

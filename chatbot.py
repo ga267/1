@@ -34,7 +34,7 @@ import agent
 
 
 PROJECT_DIR = Path(__file__).resolve().parent
-HISTORY_PATH = PROJECT_DIR / "dashboard_output" / "history_data.json"
+HISTORY_PATH = PROJECT_DIR / "dashboard_output" / "history_data.json.gz"
 
 load_dotenv(PROJECT_DIR / ".env")
 
@@ -76,7 +76,7 @@ _seen_lock = threading.Lock()
 
 
 def _to_datetime(df: pd.DataFrame) -> pd.DataFrame:
-    """恢复 history_data.json 中的日期列，便于复用看板聚合逻辑。"""
+    """恢复压缩历史数据中的日期列，便于复用看板聚合逻辑。"""
     for column in ["sign_time", "create_time", "cancel_time", "finish_time", "签到时间", "完结时间"]:
         if column in df.columns:
             df[column] = pd.to_datetime(df[column], errors="coerce")
@@ -122,7 +122,7 @@ def build_dashboard_context() -> dict[str, Any]:
         if _context_cache["mtime"] == mtime and _context_cache["value"] is not None:
             return _context_cache["value"]
 
-        df = _to_datetime(pd.read_json(HISTORY_PATH, orient="records"))
+        df = _to_datetime(pd.read_json(HISTORY_PATH, orient="records", compression="gzip"))
         weeks = sorted(df["week"].dropna().astype(str).unique())
         if not weeks:
             raise ValueError("历史数据中没有有效周标签")
