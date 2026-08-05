@@ -20,12 +20,26 @@ pip install requests pandas openpyxl python-dotenv
 ```
 FEISHU_APP_ID=your_app_id
 FEISHU_APP_SECRET=your_app_secret
-EMAIL_SUBJECT_KEYWORD=每周数据
+EMAIL_SUBJECT_KEYWORD=聚合上门宽表明细（近7天）
 ```
 
 飞书应用需开通权限：
 - `mail:mail.messages:readonly`
 - `mail:mail.attachments:readonly`
+- `im:message`
+- `im:message:send_as_bot`
+- `im:resource`
+
+如需在每周生成后向授权用户本人发送看板通知，还需在飞书开放平台开启“机器人”能力并发布上述新增权限。通知由应用机器人通过 tenant_access_token 发送到 `FEISHU_NOTIFICATION_RECEIVER_EMAIL`（未配置时默认 `chenqiriga@zhuanzhuan.com`）。邮件读取仍使用 user_access_token。
+
+如同时新增或更新了邮件读取相关的 OAuth 权限，再在本机一次性重新 OAuth 授权：
+
+```bash
+cd /your/project/path
+.venv/bin/python agent.py --authorize
+```
+
+该命令只打开授权流程，不读取邮件或改写历史数据。授权成功后，程序会自动恢复为 refresh token 自动续期模式，后续 cron 无需改动。
 
 ---
 
@@ -131,24 +145,55 @@ EMAIL_SUBJECT_KEYWORD=每周数据
 
 ## 执行方式
 
-### 手动执行
+### 定时任务（每周一 10:00 自动执行）
+
 ```bash
-cd /your/project/path
-python agent.py
+cd /Users/ga/Downloads/files && /Users/ga/Downloads/files/.venv/bin/python agent.py >> logs/agent.log 2>&1
 ```
 
-生成文件路径：`./dashboard_output/履约效率_质量看板_YYYYMMDD.html`
+### 完整执行流程
 
-### 每周自动执行（Mac/Linux cron）
-```bash
-crontab -e
-# 每周一上午 10:00 执行
-0 10 * * 1 cd /your/project/path && python agent.py
-```
+**飞书邮件取数**
 
-### Windows 任务计划程序
-- 触发器：每周一上午 10:00
-- 操作：`python /your/project/path/agent.py`
+- OAuth `user_access_token` 自动刷新
+- 仅匹配周一当天收到、且标题关键词为「聚合上门宽表明细（近7天）」的邮件
+- 若未找到对应周一邮件：立即停止，不合并历史数据、不生成或推送看板，并通过飞书机器人提醒负责人确认
+- 下载 Excel/CSV 附件
+
+**合并历史数据**
+
+- 清洗本周数据
+- 与 `dashboard_output/history_data.json.gz` 合并（压缩存储）
+- 保留最近 13 周滚动数据（约3个月），可通过 `KEEP_WEEKS` 参数调整
+- 以 `sign_time` 计算周维度全部指标
+
+**生成看板**
+
+- 当日文件：`dashboard_output/履约效率_质量看板_YYYYMMDD.html`
+- 同步更新：`index.html`
+
+**飞书妙搭发布（主用）**
+
+- 自动发布 `index.html` 到主看板应用：[https://zhuanspirit.feishuapp.com/app/app_17bhqpwvvhv](https://zhuanspirit.feishuapp.com/app/app_17bhqpwvvhv)
+- 自动发布 `anomaly.html` 到异常巡检应用：[https://zhuanspirit.feishuapp.com/app/app_17bhr25tbjd](https://zhuanspirit.feishuapp.com/app/app_17bhr25tbjd)
+
+**GitHub Pages 更新（备份）**
+
+- 自动 commit 并 push `index.html`、`anomaly.html`
+- 备份链接：[https://ga267.github.io/1/](https://ga267.github.io/1/)
+
+**飞书机器人通知**
+
+- 发送对象：`chenqiriga@zhuanzhuan.com`
+- 先发文字消息，再发 `index.html` 附件
+
+### 查看方式
+
+- 主看板（妙搭）：[https://zhuanspirit.feishuapp.com/app/app_17bhqpwvvhv](https://zhuanspirit.feishuapp.com/app/app_17bhqpwvvhv)
+- 异常巡检（妙搭）：[https://zhuanspirit.feishuapp.com/app/app_17bhr25tbjd](https://zhuanspirit.feishuapp.com/app/app_17bhr25tbjd)
+- GitHub Pages 备份：[https://ga267.github.io/1/](https://ga267.github.io/1/)
+- 飞书附件：每周一收到通知后下载 HTML，用浏览器打开
+- 本地：直接打开 `/Users/ga/Downloads/files/index.html`
 
 ---
 
@@ -156,6 +201,6 @@ crontab -e
 
 1. **字段口径以本文件为准**，如数据源字段名变更需同步更新 `agent.py` 中的 `col_rename` 映射
 2. **新人/老人阈值**：在职时长 ≥ 180 天为老人，如调整修改 `agent.py` 顶部 `SENIOR_THRESHOLD_DAYS`
-3. **邮件关键词**：`.env` 中 `EMAIL_SUBJECT_KEYWORD` 需匹配每周数据邮件标题
+3. **邮件关键词**：`.env` 中 `EMAIL_SUBJECT_KEYWORD` 需匹配“聚合上门宽表明细（近7天）”邮件标题
 4. **数据异常处理**：时长负值自动清洗为 NaN，不参与均值计算
 5. **单周数据**：折线图显示为单点，累积多周后自动变为折线

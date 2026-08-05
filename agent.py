@@ -28,9 +28,13 @@ OAUTH_REDIRECT_URI = os.getenv("FEISHU_OAUTH_REDIRECT_URI", "http://127.0.0.1:87
 OUTPUT_DIR = Path(__file__).resolve().parent / "dashboard_output"
 PROJECT_DIR = Path(__file__).resolve().parent
 PUBLISH_PATH = PROJECT_DIR / "index.html"
-MIAODA_APP_ID = os.getenv("MIAODA_APP_ID", "app_17b20ynr1p0")
+MIAODA_APP_ID = os.getenv("MIAODA_APP_ID", "app_17bhqpwvvhv")
 MIAODA_FIXED_URL = os.getenv(
-    "MIAODA_FIXED_URL", "https://zhuanspirit.feishu.cn/page/OxY6mkyyVdNp13ayzsMckkjxn1c"
+    "MIAODA_FIXED_URL", "https://zhuanspirit.feishuapp.com/app/app_17bhqpwvvhv"
+)
+MIAODA_ANOMALY_APP_ID = os.getenv("MIAODA_ANOMALY_APP_ID", "app_17bhr25tbjd")
+MIAODA_ANOMALY_URL = os.getenv(
+    "MIAODA_ANOMALY_URL", "https://zhuanspirit.feishuapp.com/app/app_17bhr25tbjd"
 )
 GITHUB_PAGES_URL = os.getenv("GITHUB_PAGES_URL", "https://ga267.github.io/1/")
 # 持久化最近 13 周的已清洗数据；使用 gzip 压缩以节省本地磁盘空间。
@@ -1655,12 +1659,8 @@ def send_feishu_notification(latest_week_label, html_path, page_name="履约效�
     print("✅ 飞书消息已发送")
 
 
-def publish_to_miaoda(index_path, anomaly_path):
-    """发布主看板与异常巡检页到同一妙搭应用，返回妙搭访问链接。
-
-    妙搭 CLI 以目录发布时会保留目录内的相对链接，因此将两个静态页面
-    临时打包后一次上传，主页面可继续通过 anomaly.html 进入异常巡检页。
-    """
+def publish_to_miaoda(html_path, app_id, fallback_url, page_name):
+    """将单个 HTML 页面发布到指定妙搭应用，返回固定访问链接。"""
     cli_candidates = [
         shutil.which("lark-cli"),
         str(Path.home() / ".local/share/pnpm/bin/lark-cli"),
@@ -1669,33 +1669,44 @@ def publish_to_miaoda(index_path, anomaly_path):
     if not cli_path:
         print("⚠️ 未找到 lark-cli，跳过妙搭发布；GitHub Pages 将作为访问备份。")
         return None
-    if not MIAODA_APP_ID:
-        print("⚠️ 未配置 MIAODA_APP_ID，跳过妙搭发布。")
+    if not app_id:
+        print(f"⚠️ 未配置 {page_name} 的妙搭 App ID，跳过妙搭发布。")
         return None
 
     try:
-        with tempfile.TemporaryDirectory(prefix=".miaoda_publish_", dir=PROJECT_DIR) as tmp_dir:
-            site_dir = Path(tmp_dir)
-            shutil.copy2(index_path, site_dir / "index.html")
-            shutil.copy2(anomaly_path, site_dir / "anomaly.html")
+        html_path = Path(html_path).resolve()
+        if html_path.name == "index.html" and html_path.parent == PROJECT_DIR:
             result = subprocess.run(
-                [cli_path, "apps", "+html-publish", "--as", "user", "--app-id", MIAODA_APP_ID,
-                 "--path", site_dir.name, "--format", "json"],
+                [cli_path, "apps", "+html-publish", "--as", "user", "--app-id", app_id,
+                 "--path", "./index.html", "--allow-sensitive", "--format", "json"],
                 cwd=PROJECT_DIR,
                 capture_output=True,
                 text=True,
                 timeout=180,
             )
+        else:
+            # 妙搭 HTML 应用固定要求入口文件名为 index.html；异常巡检单独发布。
+            with tempfile.TemporaryDirectory(prefix=".miaoda_publish_", dir=PROJECT_DIR) as tmp_dir:
+                site_dir = Path(tmp_dir)
+                shutil.copy2(html_path, site_dir / "index.html")
+                result = subprocess.run(
+                    [cli_path, "apps", "+html-publish", "--as", "user", "--app-id", app_id,
+                     "--path", site_dir.name, "--allow-sensitive", "--format", "json"],
+                    cwd=PROJECT_DIR,
+                    capture_output=True,
+                    text=True,
+                    timeout=180,
+                )
         if result.returncode != 0:
             detail = (result.stderr or result.stdout).strip()
-            print(f"⚠️ 妙搭发布失败，不影响 GitHub Pages 备份：{detail}")
+            print(f"⚠️ {page_name}妙搭发布失败，不影响 GitHub Pages 备份：{detail}")
             return None
         payload = json.loads(result.stdout)
-        url = payload.get("data", {}).get("url") or MIAODA_FIXED_URL
-        print(f"✅ 妙搭看板已发布：{url}")
+        url = payload.get("data", {}).get("url") or fallback_url
+        print(f"✅ {page_name}妙搭发布成功：{url}")
         return url
     except (OSError, subprocess.TimeoutExpired, json.JSONDecodeError) as exc:
-        print(f"⚠️ 妙搭发布失败，不影响 GitHub Pages 备份：{exc}")
+        print(f"⚠️ {page_name}妙搭发布失败，不影响 GitHub Pages 备份：{exc}")
         return None
 
 def push_to_github():
@@ -1797,7 +1808,10 @@ def main():
     shutil.copyfile(out, PUBLISH_PATH)
     shutil.copyfile(anomaly_out, PROJECT_DIR / "anomaly.html")
     print(f"🌐 Pages 首页已更新：{PUBLISH_PATH}")
-    miaoda_url = publish_to_miaoda(PUBLISH_PATH, PROJECT_DIR / "anomaly.html")
+    miaoda_url = publish_to_miaoda(PUBLISH_PATH, MIAODA_APP_ID, MIAODA_FIXED_URL, "主看板")
+    anomaly_miaoda_url = publish_to_miaoda(
+        PROJECT_DIR / "anomaly.html", MIAODA_ANOMALY_APP_ID, MIAODA_ANOMALY_URL, "异常巡检"
+    )
     push_to_github()
     try:
         notification_url = miaoda_url or GITHUB_PAGES_URL
@@ -1806,7 +1820,7 @@ def main():
         )
         send_feishu_notification(
             week_display_labels.get(latest_week, latest_week), PROJECT_DIR / "anomaly.html",
-            "本周异常巡检", "🚨", notification_url,
+            "本周异常巡检", "🚨", anomaly_miaoda_url or f"{GITHUB_PAGES_URL}anomaly.html",
         )
     except Exception as exc:
         # 看板已生成时，消息失败不应让 cron 误判整次数据处理失败。
