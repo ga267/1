@@ -989,10 +989,6 @@ h1{{font-size:24px;font-weight:700;color:#0f172a;margin-bottom:5px;letter-spacin
 .drill-heading{{margin:30px 0 14px;padding-bottom:10px;border-bottom:1px solid #cbd5e1}}.drill-heading .stitle{{margin:0;padding:0;border:0}}.drill-note{{margin-top:8px;font-size:12px;line-height:19px;color:#64748b;font-weight:400;letter-spacing:0}}
 .overall-grid{{display:grid;grid-template-columns:repeat(5,1fr);gap:12px}}
 .card{{position:relative;overflow:hidden;background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:16px 16px 8px;cursor:crosshair;text-align:left;box-shadow:0 2px 8px rgba(15,23,42,.08)}}
-.card::before{{content:'';position:absolute;z-index:1;left:0;top:0;bottom:0;width:3px;border-radius:0 2px 2px 0;background:#94a3b8}}
-.card.accent-good::before{{background:#34d399}}
-.card.accent-bad::before{{background:#f87171}}
-.card.accent-neutral::before{{background:#94a3b8}}
 .clabel{{font-size:12px;color:#64748b;margin-bottom:4px;white-space:nowrap;font-weight:500}}
 .cval{{font-size:24px;font-weight:700;color:#0f172a;letter-spacing:-.5px}}
 .delta{{height:16px;margin-top:3px;font-size:12px;color:#64748b;line-height:16px}}
