@@ -8,7 +8,7 @@
 历史数据：dashboard_output/history_data.json.gz（压缩存储）
 """
 
-import os, sys, json, secrets, threading, random, shutil, subprocess, requests, pandas as pd, numpy as np, html as html_lib
+import os, sys, json, secrets, threading, random, shutil, subprocess, tempfile, requests, pandas as pd, numpy as np, html as html_lib
 from datetime import datetime
 from zoneinfo import ZoneInfo
 from http.server import BaseHTTPRequestHandler, HTTPServer
@@ -28,6 +28,11 @@ OAUTH_REDIRECT_URI = os.getenv("FEISHU_OAUTH_REDIRECT_URI", "http://127.0.0.1:87
 OUTPUT_DIR = Path(__file__).resolve().parent / "dashboard_output"
 PROJECT_DIR = Path(__file__).resolve().parent
 PUBLISH_PATH = PROJECT_DIR / "index.html"
+MIAODA_APP_ID = os.getenv("MIAODA_APP_ID", "app_17b20ynr1p0")
+MIAODA_FIXED_URL = os.getenv(
+    "MIAODA_FIXED_URL", "https://zhuanspirit.feishu.cn/page/OxY6mkyyVdNp13ayzsMckkjxn1c"
+)
+GITHUB_PAGES_URL = os.getenv("GITHUB_PAGES_URL", "https://ga267.github.io/1/")
 # 持久化最近 13 周的已清洗数据；使用 gzip 压缩以节省本地磁盘空间。
 HISTORY_DATA_PATH = OUTPUT_DIR / "history_data.json.gz"
 # 仅用于一次性迁移旧格式；压缩文件验证后可安全移除。
@@ -1590,7 +1595,7 @@ def notify_monday_mail_missing(run_date):
         print(f"⚠️ 缺失周一邮件提醒发送失败：{exc}")
 
 
-def send_feishu_notification(latest_week_label, html_path, page_name="履约效率&质量看板", emoji="📊"):
+def send_feishu_notification(latest_week_label, html_path, page_name="履约效率&质量看板", emoji="📊", dashboard_url=None):
     """以应用机器人身份向指定企业邮箱发送看板更新文字和 HTML 附件。"""
     # 不能以用户身份向自己发消息：飞书会接受请求，但通常不会生成可见会话。
     # 机器人身份发送才会形成可见的应用单聊通知。
@@ -1602,7 +1607,8 @@ def send_feishu_notification(latest_week_label, html_path, page_name="履约效�
         f"{emoji} {page_name}已更新\n"
         f"本周数据：{latest_week_label}\n"
         f"生成时间：{generated_at}\n"
-        "请下载附件用浏览器打开查看完整看板 👇"
+        f"在线查看：{dashboard_url or MIAODA_FIXED_URL}\n"
+        "也可下载附件用浏览器打开查看完整看板 👇"
     )
     message_url = "https://open.feishu.cn/open-apis/im/v1/messages"
     text_response = requests.post(
@@ -1623,8 +1629,8 @@ def send_feishu_notification(latest_week_label, html_path, page_name="履约效�
         upload_response = requests.post(
             "https://open.feishu.cn/open-apis/im/v1/files",
             headers=headers,
-            data={"file_type": "stream", "file_name": "index.html"},
-            files={"file": ("index.html", html_file, "text/html")},
+            data={"file_type": "stream", "file_name": html_path.name},
+            files={"file": (html_path.name, html_file, "text/html")},
             timeout=120,
         ).json()
     if upload_response.get("code") != 0:
@@ -1647,6 +1653,50 @@ def send_feishu_notification(latest_week_label, html_path, page_name="履约效�
     if file_response.get("code") != 0:
         raise Exception(f"飞书文件消息发送失败: {file_response.get('msg')}")
     print("✅ 飞书消息已发送")
+
+
+def publish_to_miaoda(index_path, anomaly_path):
+    """发布主看板与异常巡检页到同一妙搭应用，返回妙搭访问链接。
+
+    妙搭 CLI 以目录发布时会保留目录内的相对链接，因此将两个静态页面
+    临时打包后一次上传，主页面可继续通过 anomaly.html 进入异常巡检页。
+    """
+    cli_candidates = [
+        shutil.which("lark-cli"),
+        str(Path.home() / ".local/share/pnpm/bin/lark-cli"),
+    ]
+    cli_path = next((path for path in cli_candidates if path and Path(path).is_file()), None)
+    if not cli_path:
+        print("⚠️ 未找到 lark-cli，跳过妙搭发布；GitHub Pages 将作为访问备份。")
+        return None
+    if not MIAODA_APP_ID:
+        print("⚠️ 未配置 MIAODA_APP_ID，跳过妙搭发布。")
+        return None
+
+    try:
+        with tempfile.TemporaryDirectory(prefix=".miaoda_publish_", dir=PROJECT_DIR) as tmp_dir:
+            site_dir = Path(tmp_dir)
+            shutil.copy2(index_path, site_dir / "index.html")
+            shutil.copy2(anomaly_path, site_dir / "anomaly.html")
+            result = subprocess.run(
+                [cli_path, "apps", "+html-publish", "--as", "user", "--app-id", MIAODA_APP_ID,
+                 "--path", site_dir.name, "--format", "json"],
+                cwd=PROJECT_DIR,
+                capture_output=True,
+                text=True,
+                timeout=180,
+            )
+        if result.returncode != 0:
+            detail = (result.stderr or result.stdout).strip()
+            print(f"⚠️ 妙搭发布失败，不影响 GitHub Pages 备份：{detail}")
+            return None
+        payload = json.loads(result.stdout)
+        url = payload.get("data", {}).get("url") or MIAODA_FIXED_URL
+        print(f"✅ 妙搭看板已发布：{url}")
+        return url
+    except (OSError, subprocess.TimeoutExpired, json.JSONDecodeError) as exc:
+        print(f"⚠️ 妙搭发布失败，不影响 GitHub Pages 备份：{exc}")
+        return None
 
 def push_to_github():
     """提交并推送首页看板；本地未配置 Git 时不影响看板生成。"""
@@ -1747,10 +1797,17 @@ def main():
     shutil.copyfile(out, PUBLISH_PATH)
     shutil.copyfile(anomaly_out, PROJECT_DIR / "anomaly.html")
     print(f"🌐 Pages 首页已更新：{PUBLISH_PATH}")
+    miaoda_url = publish_to_miaoda(PUBLISH_PATH, PROJECT_DIR / "anomaly.html")
     push_to_github()
     try:
-        send_feishu_notification(week_display_labels.get(latest_week, latest_week), PUBLISH_PATH)
-        send_feishu_notification(week_display_labels.get(latest_week, latest_week), PROJECT_DIR / "anomaly.html", "本周异常巡检", "🚨")
+        notification_url = miaoda_url or GITHUB_PAGES_URL
+        send_feishu_notification(
+            week_display_labels.get(latest_week, latest_week), PUBLISH_PATH, dashboard_url=notification_url
+        )
+        send_feishu_notification(
+            week_display_labels.get(latest_week, latest_week), PROJECT_DIR / "anomaly.html",
+            "本周异常巡检", "🚨", notification_url,
+        )
     except Exception as exc:
         # 看板已生成时，消息失败不应让 cron 误判整次数据处理失败。
         print(f"⚠️ 飞书消息发送失败，不影响看板生成：{exc}")
