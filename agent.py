@@ -979,29 +979,29 @@ def generate_html(weeks, overall_weekly, cate_weekly, categories, week_display_l
 <title>履约效率&质量看板</title>
 <style>
 *{{box-sizing:border-box;margin:0;padding:0}}
-body{{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','PingFang SC','Microsoft YaHei',sans-serif;background:#161b2e;color:#c8cce0;padding:32px 36px;min-width:1300px;text-align:left}}
-h1{{font-size:24px;font-weight:700;color:#fff;margin-bottom:5px;letter-spacing:-.4px}}
+body{{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','PingFang SC','Microsoft YaHei',sans-serif;background:#f8fafc;color:#334155;padding:32px 36px;min-width:1300px;text-align:left}}
+h1{{font-size:24px;font-weight:700;color:#0f172a;margin-bottom:5px;letter-spacing:-.4px}}
 .title-emoji{{margin-right:6px}}
 .sub{{font-size:12px;color:#7b80a0;margin-bottom:28px}}
-.page-nav{{display:inline-block;margin:2px 0 18px;color:#aeb6ff;font-size:12px;text-decoration:none;border:1px solid #39436a;border-radius:6px;padding:6px 9px;background:#1a2035}}
-.page-nav:hover{{color:#fff;border-color:#818cf8}}
-.stitle{{font-size:18px;font-weight:700;color:#fff;letter-spacing:-.15px;margin:30px 0 14px;padding-bottom:10px;border-bottom:1px solid #2e3a5c;text-align:left}}.stitle-note{{font-size:12px;font-weight:400;color:#7b80a0;letter-spacing:0}}
-.drill-heading{{margin:30px 0 14px;padding-bottom:10px;border-bottom:1px solid #2e3a5c}}.drill-heading .stitle{{margin:0;padding:0;border:0}}.drill-note{{margin-top:8px;font-size:12px;line-height:19px;color:#6370a0;font-weight:400;letter-spacing:0}}
+.page-nav{{display:inline-block;margin:2px 0 18px;color:#4f46e5;font-size:12px;text-decoration:none;border:1px solid #c7d2fe;border-radius:6px;padding:6px 9px;background:#fff}}
+.page-nav:hover{{color:#3730a3;border-color:#818cf8}}
+.stitle{{font-size:18px;font-weight:700;color:#0f172a;letter-spacing:-.15px;margin:30px 0 14px;padding-bottom:10px;border-bottom:1px solid #cbd5e1;text-align:left}}.stitle-note{{font-size:12px;font-weight:400;color:#64748b;letter-spacing:0}}
+.drill-heading{{margin:30px 0 14px;padding-bottom:10px;border-bottom:1px solid #cbd5e1}}.drill-heading .stitle{{margin:0;padding:0;border:0}}.drill-note{{margin-top:8px;font-size:12px;line-height:19px;color:#64748b;font-weight:400;letter-spacing:0}}
 .overall-grid{{display:grid;grid-template-columns:repeat(5,1fr);gap:12px}}
-.card{{position:relative;overflow:hidden;background:#1e2540;border:1px solid #2e3a5c;border-radius:12px;padding:16px 16px 8px;cursor:crosshair;text-align:left;box-shadow:0 2px 8px rgba(0,0,0,.3)}}
-.card::before{{content:'';position:absolute;z-index:1;left:0;top:0;bottom:0;width:3px;border-radius:0 2px 2px 0;background:#3a3d52}}
+.card{{position:relative;overflow:hidden;background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:16px 16px 8px;cursor:crosshair;text-align:left;box-shadow:0 2px 8px rgba(15,23,42,.08)}}
+.card::before{{content:'';position:absolute;z-index:1;left:0;top:0;bottom:0;width:3px;border-radius:0 2px 2px 0;background:#94a3b8}}
 .card.accent-good::before{{background:#34d399}}
 .card.accent-bad::before{{background:#f87171}}
-.card.accent-neutral::before{{background:#3a3d52}}
-.clabel{{font-size:12px;color:#a0aac4;margin-bottom:4px;white-space:nowrap;font-weight:500}}
-.cval{{font-size:24px;font-weight:700;color:#fff;letter-spacing:-.5px}}
-.delta{{height:16px;margin-top:3px;font-size:12px;color:#8b8fa8;line-height:16px}}
+.card.accent-neutral::before{{background:#94a3b8}}
+.clabel{{font-size:12px;color:#64748b;margin-bottom:4px;white-space:nowrap;font-weight:500}}
+.cval{{font-size:24px;font-weight:700;color:#0f172a;letter-spacing:-.5px}}
+.delta{{height:16px;margin-top:3px;font-size:12px;color:#64748b;line-height:16px}}
 .delta.good{{color:#4ade80}}
 .delta.bad{{color:#ff6b6b}}
-.card-daily{{height:14px;margin-top:2px;font-size:11px;color:#6370a0;line-height:14px}}
-.segment-list{{margin-top:8px;padding-top:7px;border-top:1px solid #2e3a5c}}
+.card-daily{{height:14px;margin-top:2px;font-size:11px;color:#64748b;line-height:14px}}
+.segment-list{{margin-top:8px;padding-top:7px;border-top:1px solid #e2e8f0}}
 .segment-row{{display:grid;grid-template-columns:minmax(0,1fr) auto auto;gap:7px;align-items:baseline;font-size:11px;line-height:17px;white-space:nowrap}}
-.segment-label{{color:#8090b8;font-size:10px;overflow:hidden;text-overflow:ellipsis}}
+.segment-label{{color:#64748b;font-size:10px;overflow:hidden;text-overflow:ellipsis}}
 .segment-value{{font-size:11px;font-weight:600}}
 .segment-value.newbie{{color:#fb7185}}
 .segment-value.senior{{color:#34d399}}
@@ -1011,67 +1011,67 @@ h1{{font-size:24px;font-weight:700;color:#fff;margin-bottom:5px;letter-spacing:-
 .card svg{{width:100%;display:block}}
 .card svg.main-spark{{height:46px}}
 .card svg.daily-spark{{height:26px;margin-top:2px;opacity:.75}}
-.cate-table{{width:100%;border-collapse:separate;border-spacing:0;background:#222a45;border:1px solid #28334f;border-radius:12px;overflow:visible}}
-.cate-table th{{background:#1a2035;color:#8890b0;font-size:12px;font-weight:600;padding:12px 10px;text-align:left;border-bottom:1px solid #2e3a5c;white-space:nowrap;position:sticky;top:0;z-index:10}}
-.cate-table th.rh{{position:sticky;top:0;left:0;z-index:15;text-align:left;min-width:150px;padding-left:16px;border-right:1px solid #2e3a5c}}
+.cate-table{{width:100%;border-collapse:separate;border-spacing:0;background:#fff;border:1px solid #e2e8f0;border-radius:12px;overflow:visible}}
+.cate-table th{{background:#f1f5f9;color:#475569;font-size:12px;font-weight:600;padding:12px 10px;text-align:left;border-bottom:1px solid #cbd5e1;white-space:nowrap;position:sticky;top:0;z-index:10}}
+.cate-table th.rh{{position:sticky;top:0;left:0;z-index:15;text-align:left;min-width:150px;padding-left:16px;border-right:1px solid #cbd5e1}}
 .cate-table th.rh::before{{content:'';position:absolute;left:0;top:0;bottom:0;width:3px;border-radius:0 2px 2px 0;background:#6366f1}}
-.cate-head-note{{margin-top:2px;color:#6370a0;font-size:10px;font-weight:400;line-height:1.2}}
-.cate-table td{{border-bottom:1px solid #28334f;padding:0;vertical-align:middle;text-align:left}}
-.cate-table tbody td:first-child{{position:sticky;left:0;z-index:5;background:#1a2035;border-right:1px solid #2e3a5c}}
-.cate-table tbody td:first-child .rl-total,.cate-table tbody td:first-child .rl-newbie,.cate-table tbody td:first-child .rl-senior{{background:#1a2035}}
+.cate-head-note{{margin-top:2px;color:#64748b;font-size:10px;font-weight:400;line-height:1.2}}
+.cate-table td{{border-bottom:1px solid #e2e8f0;padding:0;vertical-align:middle;text-align:left}}
+.cate-table tbody td:first-child{{position:sticky;left:0;z-index:5;background:#fff;border-right:1px solid #cbd5e1}}
+.cate-table tbody td:first-child .rl-total{{background:#fff}}.cate-table tbody td:first-child .rl-newbie,.cate-table tbody td:first-child .rl-senior{{background:#f8fafc}}
 .cate-table tr:last-child td{{border-bottom:0}}
-.rl-total{{position:relative;font-size:14px;font-weight:700;color:#e0e4f4;background:#222a45;padding:12px 14px 12px 18px;white-space:nowrap;text-align:left}}
+.rl-total{{position:relative;font-size:14px;font-weight:700;color:#1e293b;background:#fff;padding:12px 14px 12px 18px;white-space:nowrap;text-align:left}}
 .rl-total::before{{content:'';position:absolute;left:0;top:0;bottom:0;width:3px;border-radius:0 2px 2px 0;background:#6366f1}}
-.rl-newbie,.rl-senior{{font-size:12px;font-weight:400;color:#8090b8;background:#1a2238;padding:9px 14px 9px 30px;white-space:nowrap;text-align:left}}
-.group-note{{margin-left:4px;color:#6370a0;font-size:10px;font-weight:400}}
-.daily-deals{{margin-top:3px;color:#6370a0;font-weight:400;white-space:nowrap}}
+.rl-newbie,.rl-senior{{font-size:12px;font-weight:400;color:#64748b;background:#f8fafc;padding:9px 14px 9px 30px;white-space:nowrap;text-align:left}}
+.group-note{{margin-left:4px;color:#64748b;font-size:10px;font-weight:400}}
+.daily-deals{{margin-top:3px;color:#64748b;font-weight:400;white-space:nowrap}}
 .rl-total .daily-deals{{font-size:12px}}
 .rl-newbie .daily-deals,.rl-senior .daily-deals{{font-size:10px}}
 .cate-total-row{{cursor:pointer}}
-.cate-total-row .rl-total::after{{content:'⌄';margin-left:6px;color:#c4c8e0;font-size:10px}}
+.cate-total-row .rl-total::after{{content:'⌄';margin-left:6px;color:#475569;font-size:10px}}
 .cate-total-row.open .rl-total::after{{content:'⌃'}}
 .cate-sub-row{{display:none}}
-.tc-total{{background:#222a45;padding:10px 12px 5px;cursor:crosshair;min-width:130px;text-align:left}}
-.tc-total .tval{{font-size:15px;font-weight:600;color:#fff}}
+.tc-total{{background:#fff;padding:10px 12px 5px;cursor:crosshair;min-width:130px;text-align:left}}
+.tc-total .tval{{font-size:15px;font-weight:600;color:#0f172a}}
 .tc-total .delta{{font-size:12px}}
 .tc-total svg{{height:34px;width:100%;display:block}}
-.tc-sub{{background:#1a2238;padding:8px 12px 4px;cursor:crosshair;min-width:130px;text-align:left}}
-.tc-sub .tval{{font-size:12px;font-weight:400;color:#8090b8}}
+.tc-sub{{background:#f8fafc;padding:8px 12px 4px;cursor:crosshair;min-width:130px;text-align:left}}
+.tc-sub .tval{{font-size:12px;font-weight:400;color:#64748b}}
 .tc-sub .delta{{font-size:11px;height:13px;line-height:13px}}
 .tc-sub svg{{height:20px;width:100%;display:block}}
-.tooltip{{position:fixed;background:#252839;border:1px solid #3a3d52;border-radius:8px;padding:7px 11px;font-size:11px;color:#fff;pointer-events:none;z-index:9999;display:none;white-space:nowrap;box-shadow:0 4px 16px rgba(0,0,0,.3)}}
-.tooltip .tw{{color:#c4c8e0;font-size:10px;margin-bottom:2px}}
-.tooltip .tv{{font-size:14px;font-weight:700;color:#fff}}
-.qmark{{display:inline-flex;align-items:center;justify-content:center;width:13px;height:13px;margin-left:4px;border:1px solid #7b80a0;border-radius:50%;color:#c4c8e0;font-size:9px;line-height:1;cursor:pointer;vertical-align:1px}}
-.formula{{position:fixed;z-index:10000;display:none;max-width:320px;padding:10px 12px;border:1px solid #3a3d52;border-radius:8px;background:#252839;color:#fff;font-size:12px;line-height:1.55;text-align:left;box-shadow:0 8px 28px rgba(0,0,0,.3)}}
-.formula strong{{display:block;margin-bottom:3px;color:#fff}}
-.anomaly-wrap{{margin:8px 0 30px;border:1px solid #2e3a5c;border-radius:12px;background:#1a1d2b;overflow:hidden}}
-.anomaly-panel{{border-bottom:1px solid #28334f}}
+.tooltip{{position:fixed;background:#fff;border:1px solid #cbd5e1;border-radius:8px;padding:7px 11px;font-size:11px;color:#0f172a;pointer-events:none;z-index:9999;display:none;white-space:nowrap;box-shadow:0 4px 16px rgba(15,23,42,.12)}}
+.tooltip .tw{{color:#64748b;font-size:10px;margin-bottom:2px}}
+.tooltip .tv{{font-size:14px;font-weight:700;color:#0f172a}}
+.qmark{{display:inline-flex;align-items:center;justify-content:center;width:13px;height:13px;margin-left:4px;border:1px solid #94a3b8;border-radius:50%;color:#475569;font-size:9px;line-height:1;cursor:pointer;vertical-align:1px}}
+.formula{{position:fixed;z-index:10000;display:none;max-width:320px;padding:10px 12px;border:1px solid #cbd5e1;border-radius:8px;background:#fff;color:#0f172a;font-size:12px;line-height:1.55;text-align:left;box-shadow:0 8px 28px rgba(15,23,42,.12)}}
+.formula strong{{display:block;margin-bottom:3px;color:#0f172a}}
+.anomaly-wrap{{margin:8px 0 30px;border:1px solid #cbd5e1;border-radius:12px;background:#fff;overflow:hidden}}
+.anomaly-panel{{border-bottom:1px solid #e2e8f0}}
 .anomaly-panel:last-child{{border-bottom:0}}
-.anomaly-toggle{{width:100%;padding:13px 16px;background:#1e2540;color:#e0e4f4;border:0;text-align:left;font-size:14px;font-weight:700;cursor:pointer;display:flex;justify-content:space-between;align-items:center}}
-.anomaly-toggle:hover{{background:#222a45}}
+.anomaly-toggle{{width:100%;padding:13px 16px;background:#f8fafc;color:#1e293b;border:0;text-align:left;font-size:14px;font-weight:700;cursor:pointer;display:flex;justify-content:space-between;align-items:center}}
+.anomaly-toggle:hover{{background:#f1f5f9}}
 .anomaly-body{{padding:14px 16px 16px}}
-.anomaly-toggle .chev{{color:#7b80a0;font-size:12px}}
+.anomaly-toggle .chev{{color:#64748b;font-size:12px}}
 .anomaly-grid{{display:flex;gap:10px;flex-wrap:wrap}}
-.anomaly-card{{min-width:185px;flex:1;background:#222a45;border:1px solid #28334f;border-left:3px solid #f87171;border-radius:8px;padding:10px 12px}}
+.anomaly-card{{min-width:185px;flex:1;background:#fff;border:1px solid #e2e8f0;border-left:3px solid #f87171;border-radius:8px;padding:10px 12px}}
 .anomaly-card.improved{{border-left-color:#34d399}}
-.anomaly-metric{{font-size:12px;color:#c4c8e0;font-weight:600;margin-bottom:6px}}
-.anomaly-value{{font-size:18px;color:#fff;font-weight:700}}
+.anomaly-metric{{font-size:12px;color:#475569;font-weight:600;margin-bottom:6px}}
+.anomaly-value{{font-size:18px;color:#0f172a;font-weight:700}}
 .anomaly-delta{{font-size:12px;color:#ff6b6b;margin-left:6px;font-weight:600}}
 .anomaly-delta.improved{{color:#4ade80}}
-.anomaly-reason{{font-size:10px;color:#7b80a0;margin-top:5px}}
+.anomaly-reason{{font-size:10px;color:#64748b;margin-top:5px}}
 .anomaly-table{{width:100%;border-collapse:collapse;font-size:12px;min-width:900px}}
 .anomaly-scroll{{overflow-x:auto}}
-.anomaly-table th{{padding:9px 10px;color:#8890b0;background:#1a2035;border-bottom:1px solid #28334f;text-align:left;font-weight:600;white-space:nowrap}}
-.anomaly-table td{{padding:9px 10px;color:#c8cce0;border-bottom:1px solid #28334f;vertical-align:top}}
+.anomaly-table th{{padding:9px 10px;color:#475569;background:#f1f5f9;border-bottom:1px solid #e2e8f0;text-align:left;font-weight:600;white-space:nowrap}}
+.anomaly-table td{{padding:9px 10px;color:#334155;border-bottom:1px solid #e2e8f0;vertical-align:top}}
 .anomaly-table tr:last-child td{{border-bottom:0}}
-.metric-drill-frame{{width:100%;height:1px;border:1px solid #2e3a5c;border-radius:12px;background:#161b2e;display:block}}
-.tag{{display:inline-block;padding:2px 6px;margin:1px 3px 1px 0;border-radius:4px;background:#402633;color:#ff8a8a;font-size:10px;white-space:nowrap}}
-.tag.good{{background:#173c35;color:#62e0ab}}
-.empty-state{{color:#7b80a0;font-size:12px;padding:6px 0}}
+.metric-drill-frame{{width:100%;height:1px;border:1px solid #cbd5e1;border-radius:12px;background:#f8fafc;display:block}}
+.tag{{display:inline-block;padding:2px 6px;margin:1px 3px 1px 0;border-radius:4px;background:#fef2f2;color:#dc2626;font-size:10px;white-space:nowrap}}
+.tag.good{{background:#ecfdf5;color:#059669}}
+.empty-state{{color:#64748b;font-size:12px;padding:6px 0}}
 .engineer-summary{{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:14px}}
-.engineer-kpi{{background:#222a45;border:1px solid #28334f;border-radius:8px;padding:10px 12px}}
-.engineer-kpi .klabel{{font-size:11px;color:#8090b8}}.engineer-kpi .kvalue{{font-size:20px;font-weight:700;color:#fff;margin-top:3px}}.engineer-kpi svg{{height:30px;width:100%;display:block;margin-top:4px}}
+.engineer-kpi{{background:#fff;border:1px solid #e2e8f0;border-radius:8px;padding:10px 12px}}
+.engineer-kpi .klabel{{font-size:11px;color:#64748b}}.engineer-kpi .kvalue{{font-size:20px;font-weight:700;color:#0f172a;margin-top:3px}}.engineer-kpi svg{{height:30px;width:100%;display:block;margin-top:4px}}
 </style>
 </head>
 <body>
@@ -1467,6 +1467,9 @@ def generate_metric_anomaly_html(data, week_display_label):
 <style>
 *{{box-sizing:border-box}}body{{margin:0;padding:32px 36px;min-width:1200px;background:#161b2e;color:#c8cce0;font-family:-apple-system,BlinkMacSystemFont,"PingFang SC",sans-serif}}h1{{margin:0 0 6px;color:#fff;font-size:24px}}.sub{{color:#7b80a0;font-size:12px;margin-bottom:15px}}.nav{{display:inline-block;margin-bottom:18px;padding:6px 9px;border:1px solid #39436a;border-radius:6px;background:#1a2035;color:#aeb6ff;text-decoration:none;font-size:12px}}.summary{{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin:4px 0 22px}}.card,.metric{{background:#1e2540;border:1px solid #2e3a5c;border-radius:12px;box-shadow:0 2px 8px rgba(0,0,0,.25)}}.card{{padding:13px}}.card small{{color:#a0aac4}}.card b{{display:block;margin-top:4px;font-size:24px;color:#fff}}.metric{{margin:14px 0;overflow:hidden}}.metric>summary{{padding:14px 16px;background:#1a2035;color:#fff;font-size:15px;font-weight:700;cursor:pointer}}details.layer{{margin:10px 14px;background:#222a45;border:1px solid #28334f;border-radius:8px}}details.layer>summary{{padding:10px 12px;color:#e0e4f4;font-size:13px;font-weight:700;cursor:pointer}}.body{{padding:0 12px 12px;overflow:auto}}table{{border-collapse:collapse;width:100%;font-size:12px;min-width:920px}}th{{padding:9px;text-align:left;background:#1a2035;color:#8890b0;white-space:nowrap}}td{{padding:9px;border-bottom:1px solid #28334f;vertical-align:top;white-space:nowrap}}.bad{{color:#ff6b6b}}.good{{color:#4ade80}}.neutral{{color:#7b80a0}}.tag{{display:inline-block;padding:2px 5px;border-radius:4px;background:#303b60;color:#c8cce0;font-size:10px;white-space:nowrap}}.q{{display:inline-flex;align-items:center;justify-content:center;width:16px;height:16px;padding:0;border:1px solid #7b80a0;border-radius:50%;background:transparent;color:#aeb6ff;font-size:10px;cursor:pointer;margin-left:3px;vertical-align:middle}}.formula-popover{{display:none;position:fixed;z-index:9999;max-width:330px;padding:10px 12px;border:1px solid #3a4670;border-radius:8px;background:#252d4a;color:#e0e4f4;font-size:12px;line-height:1.55;box-shadow:0 8px 24px rgba(0,0,0,.35)}}.formula-popover.show{{display:block}}
 body.embed{{padding:0 2px;min-width:1100px}}body.embed h1,body.embed .sub,body.embed .nav,body.embed .summary{{display:none}}
+/* 白色主题覆盖：异常巡检与主看板保持一致的浅色层级。 */
+body{{background:#f8fafc;color:#334155}}h1{{color:#0f172a}}.sub{{color:#64748b}}.nav{{color:#4f46e5;background:#fff;border-color:#c7d2fe}}.nav:hover{{color:#3730a3;border-color:#818cf8}}
+.summary .card,.metric{{background:#fff;border-color:#e2e8f0;box-shadow:0 2px 8px rgba(15,23,42,.08)}}.card small{{color:#64748b}}.card b{{color:#0f172a}}.metric>summary{{background:#f8fafc;color:#0f172a}}details.layer{{background:#fff;border-color:#e2e8f0}}details.layer>summary{{color:#1e293b}}th{{background:#f1f5f9;color:#475569}}td{{color:#334155;border-bottom-color:#e2e8f0}}.neutral{{color:#64748b}}.tag{{background:#eef2ff;color:#4f46e5}}.q{{border-color:#94a3b8;color:#475569}}.formula-popover{{background:#fff;color:#0f172a;border-color:#cbd5e1;box-shadow:0 8px 24px rgba(15,23,42,.12)}}
 </style></head><body><h1>🚨 本周异常巡检</h1><div class="sub">周签到维度 · {week_display_label}</div><a class="nav" href="index.html">📊 返回主看板 ←</a><div id="summary" class="summary"></div><main id="app"></main><div id="formula-popover" class="formula-popover" role="dialog"></div><script>
 const D={payload}, FORM={formulas};
 if(new URLSearchParams(location.search).has('embed')) document.body.classList.add('embed');
@@ -1489,6 +1492,7 @@ app.insertAdjacentHTML('beforeend',`<details class="metric" open><summary>${{b.m
 </script><script>
 /* 表格矩阵视图：品类分组，整体/新人/老人三行。 */
 document.head.insertAdjacentHTML('beforeend','<style>.matrix{{margin:10px 0}}.matrix .body{{padding:0;max-height:none}}.matrix th:first-child,.matrix td:first-child{{position:sticky;left:0;z-index:2}}.matrix th:first-child{{background:#1a2035}}.matrix td:first-child{{background:#1e2540}}.matrix tr.sub{{display:none;background:#181b26;font-size:11px}}.matrix tr.sub td{{color:#9ba0bc}}.matrix tr.new td:first-child{{color:#fb7185;padding-left:2em}}.matrix tr.old td:first-child{{color:#34d399;padding-left:2em}}.matrix tr.total td:first-child{{border-left:3px solid #6366f1}}.matrix tr.total{{cursor:pointer}}.matrix .source{{color:#fbbf24;font-size:10px}}.matrix .extreme{{color:#7b80a0;font-size:10px}}.matrix .denom{{display:block;margin-top:3px;color:#7b80a0;font-size:10px;font-weight:400;white-space:nowrap}}.matrix .trend{{margin-left:4px;color:#f59e0b;font-size:10px;white-space:nowrap}}</style>');
+document.head.insertAdjacentHTML('beforeend','<style>.matrix{{background:#fff;border-color:#e2e8f0}}.matrix th:first-child{{background:#f1f5f9}}.matrix td:first-child{{background:#fff}}.matrix tr.sub{{background:#f8fafc}}.matrix tr.sub td{{color:#64748b}}.matrix .extreme,.matrix .denom{{color:#64748b}}.matrix .body{{background:#fff}}</style>');
 const badDown2=new Set(['拍照及时完成率','报价成交率']);
 const statusCell=(metric,obj)=>{{if(!obj||obj.value==null)return '<span class="neutral" title="上周：—">—</span>';const prev=obj.prev;const diff=prev==null?0:obj.value-prev;const good=badDown2.has(metric)?diff>0:diff<0;const color=diff===0?'neutral':good?'good':'bad';return `<span class="${{color}}" title="上周：${{value(metric,prev)}}">${{value(metric,obj.value)}}</span>`;}};
 const matrixApp=document.getElementById('app');matrixApp.innerHTML='';
