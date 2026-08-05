@@ -10,6 +10,7 @@
 
 import os, sys, json, secrets, threading, random, shutil, subprocess, requests, pandas as pd, numpy as np, html as html_lib
 from datetime import datetime
+from zoneinfo import ZoneInfo
 from http.server import BaseHTTPRequestHandler, HTTPServer
 from pathlib import Path
 from dotenv import load_dotenv, set_key
@@ -27,7 +28,7 @@ OAUTH_REDIRECT_URI = os.getenv("FEISHU_OAUTH_REDIRECT_URI", "http://127.0.0.1:87
 OUTPUT_DIR = Path(__file__).resolve().parent / "dashboard_output"
 PROJECT_DIR = Path(__file__).resolve().parent
 PUBLISH_PATH = PROJECT_DIR / "index.html"
-# 持久化最近 6 周的已清洗数据；使用 gzip 压缩以节省本地磁盘空间。
+# 持久化最近 13 周的已清洗数据；使用 gzip 压缩以节省本地磁盘空间。
 HISTORY_DATA_PATH = OUTPUT_DIR / "history_data.json.gz"
 # 仅用于一次性迁移旧格式；压缩文件验证后可安全移除。
 UNCOMPRESSED_HISTORY_DATA_PATH = OUTPUT_DIR / "history_data.json"
@@ -43,6 +44,7 @@ HISTORY_COLUMNS = [
     "首次拍照时长", "拍照报价时长", "签到完结时长", "议价时长", "报价次数",
 ]
 SENIOR_DAYS = 180   # 在职天数 >= 此值为老人
+LOCAL_TZ = ZoneInfo("Asia/Shanghai")
 # ==========================
 
 METRICS = [
@@ -252,10 +254,33 @@ def get_mails(token):
         mails.append(detail.get("data", {}).get("message", {}))
     return mails
 
-def find_mail(mails):
-    if not EMAIL_KW:
-        return mails[0] if mails else None
-    return next((m for m in mails if EMAIL_KW in m.get("subject", "")), None)
+def mail_received_at(mail):
+    """返回飞书邮件的收件时间（北京时间）；无法解析时返回 None。"""
+    raw = mail.get("internal_date")
+    if raw in (None, ""):
+        return None
+    try:
+        timestamp = float(raw)
+        # 飞书 internal_date 为 Unix 毫秒时间戳；保留秒级兼容，避免接口变更后误判。
+        if timestamp > 10_000_000_000:
+            timestamp /= 1000
+        return datetime.fromtimestamp(timestamp, tz=LOCAL_TZ)
+    except (TypeError, ValueError, OverflowError, OSError):
+        return None
+
+
+def find_monday_mail(mails, target_date=None):
+    """只返回周一当天收到且标题命中的最新邮件，绝不回退使用历史邮件。"""
+    target_date = target_date or datetime.now(LOCAL_TZ).date()
+    candidates = []
+    for mail in mails:
+        subject = mail.get("subject", "")
+        if EMAIL_KW and EMAIL_KW not in subject:
+            continue
+        received_at = mail_received_at(mail)
+        if received_at and received_at.date() == target_date:
+            candidates.append((received_at, mail))
+    return max(candidates, key=lambda item: item[0])[1] if candidates else None
 
 def download_attachment(token, message_id):
     detail = requests.get(
@@ -1532,6 +1557,39 @@ document.querySelectorAll('.matrix th').forEach(th=>{{const name=th.textContent.
 }})();
 </script></body></html>'''
 
+def send_feishu_text_notification(text):
+    """以应用机器人身份发送纯文本提醒，用于阻断自动更新时请求人工确认。"""
+    bot_token = get_token()
+    response = requests.post(
+        "https://open.feishu.cn/open-apis/im/v1/messages",
+        headers={"Authorization": f"Bearer {bot_token}", "Content-Type": "application/json; charset=utf-8"},
+        params={"receive_id_type": "email"},
+        json={
+            "receive_id": NOTIFICATION_RECEIVER_EMAIL,
+            "msg_type": "text",
+            "content": json.dumps({"text": text}, ensure_ascii=False),
+        },
+        timeout=30,
+    ).json()
+    if response.get("code") != 0:
+        raise Exception(f"飞书提醒发送失败: {response.get('msg')}")
+
+
+def notify_monday_mail_missing(run_date):
+    """未找到周一数据邮件时通知负责人；通知失败不应触发历史数据更新。"""
+    message = (
+        "⚠️ 履约效率&质量看板未更新\n"
+        f"未找到周一（{run_date:%Y-%m-%d}）收到的「{EMAIL_KW}」邮件。\n"
+        "本次已停止执行，历史数据、看板和 GitHub Pages 均未更新。\n"
+        "请确认邮件是否已发送；如需使用历史邮件，请回复确认后再手动处理。"
+    )
+    try:
+        send_feishu_text_notification(message)
+        print("✅ 已发送缺失周一邮件的飞书确认提醒")
+    except Exception as exc:
+        print(f"⚠️ 缺失周一邮件提醒发送失败：{exc}")
+
+
 def send_feishu_notification(latest_week_label, html_path, page_name="履约效率&质量看板", emoji="📊"):
     """以应用机器人身份向指定企业邮箱发送看板更新文字和 HTML 附件。"""
     # 不能以用户身份向自己发消息：飞书会接受请求，但通常不会生成可见会话。
@@ -1617,15 +1675,25 @@ def push_to_github():
 def main():
     print("🚀 履约效率&质量看板 Agent 启动...")
 
+    run_date = datetime.now(LOCAL_TZ).date()
+    if run_date.weekday() != 0:
+        print(f"⏹️ 当前为 {run_date:%Y-%m-%d}，不是周一；为避免误用历史邮件，本次不执行更新。")
+        notify_monday_mail_missing(run_date)
+        return
+
     token = get_user_token()
     mails = get_mails(token)
     if not mails:
-        raise Exception("邮件列表为空")
+        print("⏹️ 邮件列表为空，本次不执行更新。")
+        notify_monday_mail_missing(run_date)
+        return
 
-    mail = find_mail(mails)
+    mail = find_monday_mail(mails, run_date)
     if not mail:
-        raise Exception(f"未找到含「{EMAIL_KW}」的邮件")
-    print(f"📬 目标邮件：{mail.get('subject')}")
+        print(f"⏹️ 未找到周一当天收到的「{EMAIL_KW}」邮件，本次不执行更新。")
+        notify_monday_mail_missing(run_date)
+        return
+    print(f"📬 周一目标邮件：{mail.get('subject')}（{mail_received_at(mail):%Y-%m-%d %H:%M}）")
 
     file_path = download_attachment(token, mail["message_id"])
     df = merge_history(load_and_clean(file_path))
