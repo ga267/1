@@ -1082,7 +1082,7 @@ h1{{font-size:24px;font-weight:700;color:#0f172a;margin-bottom:5px;letter-spacin
 <body>
 <h1><span class="title-emoji">{title_emoji}</span>履约效率&质量看板</h1>
 <div class="sub">周签到维度 · 全量 · 每周一10:00更新数据</div>
-<a class="page-nav" href="anomaly.html">🚨 本周异常巡检 →</a>
+<a class="page-nav" href="{MIAODA_ANOMALY_URL}">🚨 本周异常巡检 →</a>
 <div class="stitle">数据概览（未剔除）</div>
 <div id="og" class="overall-grid"></div>
 <!-- 全指标品类下探统一保留在 anomaly.html（第二页）；此容器仅兼容旧脚本，不在主看板展示。 -->
@@ -1475,7 +1475,7 @@ body.embed{{padding:0 2px;min-width:1100px}}body.embed h1,body.embed .sub,body.e
 /* 白色主题覆盖：异常巡检与主看板保持一致的浅色层级。 */
 body{{background:#f8fafc;color:#334155}}h1{{color:#0f172a}}.sub{{color:#64748b}}.nav{{color:#4f46e5;background:#fff;border-color:#c7d2fe}}.nav:hover{{color:#3730a3;border-color:#818cf8}}
 .summary .card,.metric{{background:#fff;border-color:#e2e8f0;box-shadow:0 2px 8px rgba(15,23,42,.08)}}.card small{{color:#64748b}}.card b{{color:#0f172a}}.metric>summary{{background:#f8fafc;color:#0f172a}}details.layer{{background:#fff;border-color:#e2e8f0}}details.layer>summary{{color:#1e293b}}th{{background:#f1f5f9;color:#475569}}td{{color:#334155;border-bottom-color:#e2e8f0}}.neutral{{color:#64748b}}.tag{{background:#eef2ff;color:#4f46e5}}.q{{border-color:#94a3b8;color:#475569}}.formula-popover{{background:#fff;color:#0f172a;border-color:#cbd5e1;box-shadow:0 8px 24px rgba(15,23,42,.12)}}
-</style></head><body><h1>🚨 本周异常巡检</h1><div class="sub">周签到维度 · {week_display_label}</div><a class="nav" href="index.html">📊 返回主看板 ←</a><div id="summary" class="summary"></div><main id="app"></main><div id="formula-popover" class="formula-popover" role="dialog"></div><script>
+</style></head><body><h1>🚨 本周异常巡检</h1><div class="sub">周签到维度 · {week_display_label}</div><a class="nav" href="{MIAODA_FIXED_URL}">📊 返回主看板 ←</a><div id="summary" class="summary"></div><main id="app"></main><div id="formula-popover" class="formula-popover" role="dialog"></div><script>
 const D={payload}, FORM={formulas};
 if(new URLSearchParams(location.search).has('embed')) document.body.classList.add('embed');
 const rate=new Set(['履约超时率','拍照及时完成率','驳回率','复检率','报价成交率','多次驳回占比','多次复检占比','履约≥60min订单占比','拍照报价率']);
@@ -1691,7 +1691,7 @@ def publish_to_miaoda(html_path, app_id, fallback_url, page_name):
                 shutil.copy2(html_path, site_dir / "index.html")
                 result = subprocess.run(
                     [cli_path, "apps", "+html-publish", "--as", "user", "--app-id", app_id,
-                     "--path", site_dir.name, "--allow-sensitive", "--format", "json"],
+                     "--path", f"./{site_dir.name}", "--allow-sensitive", "--format", "json"],
                     cwd=PROJECT_DIR,
                     capture_output=True,
                     text=True,
